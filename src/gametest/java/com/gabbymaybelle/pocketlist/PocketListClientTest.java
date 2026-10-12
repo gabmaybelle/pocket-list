@@ -47,6 +47,10 @@ import net.minecraft.world.phys.Vec3;
 public class PocketListClientTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
+		if (ScreenshotTour.enabled()) {
+			// Only taking screenshots this time.
+			return;
+		}
 		TestWorldSave save;
 		try (TestSingleplayerContext world = ctx.worldBuilder().create()) {
 			world.getConnection().waitForChunksRender();
