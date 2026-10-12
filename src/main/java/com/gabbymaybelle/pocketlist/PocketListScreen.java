@@ -44,6 +44,9 @@ public class PocketListScreen extends Screen {
 	private int page;
 	private int rowsPerPage;
 	private String search = "";
+	/** The results for {@link #search}, worked out once per change: the registry is big in a modpack. */
+	private String resultsFor = "";
+	private List<Item> results = List.of();
 	private String addAmount = "";
 	private boolean searchFocused;
 	private long deleteArmedUntil;
@@ -242,8 +245,17 @@ public class PocketListScreen extends Screen {
 	}
 
 	private List<Item> searchResults() {
+		if (!search.equals(resultsFor)) {
+			results = findItems(search);
+			resultsFor = search;
+		}
+		return results;
+	}
+
+	/** The first few items whose name contains the text, in registry order. */
+	private List<Item> findItems(String text) {
 		List<Item> out = new ArrayList<>();
-		String query = search.trim().toLowerCase(Locale.ROOT);
+		String query = text.trim().toLowerCase(Locale.ROOT);
 		if (query.isEmpty()) {
 			return out;
 		}
