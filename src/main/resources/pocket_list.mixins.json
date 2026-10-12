@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "com.gabbymaybelle.pocketlist.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"AbstractContainerScreenAccessor",
+		"AbstractRecipeBookScreenAccessor",
+		"RecipeBookComponentAccessor",
+		"RecipeBookPageAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "pocket_list_gametest",
+	"version": "1.0.0",
+	"name": "Pocket List game tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.gabbymaybelle.pocketlist.PocketListClientTest"
+		]
+	},
+	"depends": {
+		"pocket_list": "*"
+	}
+}

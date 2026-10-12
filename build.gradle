@@ -1,0 +1,91 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+repositories {
+	maven { url = 'https://maven.terraformersmc.com/releases/' }
+	maven { url = 'https://maven.shedaniel.me/' }
+	exclusiveContent {
+		forRepository {
+			maven { url = 'https://api.modrinth.com/maven' }
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
+}
+
+loom {
+	mods {
+		"pocket_list" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	// Versions are in gradle.properties.
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Mod Menu: only for the Config button; not bundled or required.
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
+	// (Modrinth version ids: JEI 31.10.0.63, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
+	compileOnly "maven.modrinth:jei:xx7kXPHL"
+	compileOnly "maven.modrinth:rei:rKsAE6bX"
+	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
+	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+
+	// `./gradlew runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
+	if (project.findProperty("testViewer") == "jei") {
+		runtimeOnly "maven.modrinth:jei:xx7kXPHL"
+	} else if (project.findProperty("testViewer") == "rei") {
+		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
+		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"
+		runtimeOnly "maven.modrinth:architectury-api:1pMaB6So"
+	}
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	// Also builds a -sources jar alongside the mod.
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+// Client game tests: `./gradlew runClientGameTest` starts a real game, creates a test
+// world and drives it (keys, clicks, screenshots) from src/gametest. Nothing here ships in the jar.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "pocket_list_gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
