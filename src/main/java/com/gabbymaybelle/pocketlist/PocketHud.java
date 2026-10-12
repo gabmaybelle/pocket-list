@@ -17,6 +17,10 @@ public final class PocketHud {
 	private static final int MARGIN = 4;
 	private static final int PADDING = 3;
 	private static final int LINE = 17;
+	/** Half of the vanilla hotbar's width (182 GUI pixels, centred at the bottom), with a little spare. */
+	private static final int HOTBAR_HALF_WIDTH = 93;
+	/** The hotbar, hearts, hunger and experience bar together reach about this far up from the bottom. */
+	private static final int HOTBAR_BLOCK = 56;
 	private static final int BACKDROP = 0x90000000;
 	private static final int FLASH = 0x60FFFFFF;
 	private static final int TITLE = 0xFFFFDD77;
@@ -65,9 +69,16 @@ public final class PocketHud {
 		}
 
 		int height = 10 + shown * LINE + (more != null ? 10 : 0);
-		int x = MARGIN;
-		int y = MARGIN;
-		graphics.fill(x, y, x + width + PADDING * 2, y + height + PADDING * 2, BACKDROP);
+		int boxWidth = width + PADDING * 2;
+		int boxHeight = height + PADDING * 2;
+		Lists.HudPosition position = Lists.data().hudPosition;
+		int x = position.right() ? graphics.guiWidth() - MARGIN - boxWidth : MARGIN;
+		int y = position.top() ? MARGIN : graphics.guiHeight() - MARGIN - boxHeight;
+		if (!position.top() && x < graphics.guiWidth() / 2 + HOTBAR_HALF_WIDTH && x + boxWidth > graphics.guiWidth() / 2 - HOTBAR_HALF_WIDTH) {
+			// On a narrow screen a bottom corner would run into the hotbar and the bars above it: sit above them.
+			y -= HOTBAR_BLOCK;
+		}
+		graphics.fill(x, y, x + boxWidth, y + boxHeight, BACKDROP);
 		x += PADDING;
 		y += PADDING;
 		graphics.text(font, title, x, y, allDone ? DONE : TITLE, true);

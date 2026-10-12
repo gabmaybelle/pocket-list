@@ -70,6 +70,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 			typedAmounts(ctx);
 			breakDown(ctx, server);
 			finishedToast(ctx, server);
+			settings(ctx);
 			saving(ctx);
 			save = world.getWorldSave();
 		}
@@ -91,6 +92,62 @@ public class PocketListClientTest implements FabricClientGameTest {
 	}
 
 	// ------------------------------------------------------------------ new in this round
+
+	/** The Settings button opens the settings; the HUD Position button walks the corners and the HUD follows. */
+	private static void settings(ClientGameTestContext ctx) {
+		ctx.runOnClient(mc -> {
+			Lists.active().entries.clear();
+			Lists.add(Entry.ofItem(Items.OAK_PLANKS, 12));
+			Lists.data().hudPosition = Lists.HudPosition.TOP_LEFT;
+		});
+		ctx.getInput().pressKey(PocketList.openKey);
+		ctx.waitForScreen(PocketListScreen.class);
+		AbstractWidget settings = widgetNamed(ctx, "Settings");
+		check(settings != null, "the list screen has a Settings button");
+		click(ctx, settings.getX() + 5, settings.getY() + 5);
+		ctx.waitForScreen(PocketListSettingsScreen.class);
+		ctx.takeScreenshot("pocket_list_settings");
+		AbstractWidget position = widgetNamed(ctx, "HUD Position");
+		check(position != null, "the settings have a HUD Position button");
+		Lists.HudPosition[] corners = Lists.HudPosition.values();
+		for (int i = 1; i < corners.length; i++) {
+			click(ctx, position.getX() + 5, position.getY() + 5);
+			ctx.waitTick();
+			Lists.HudPosition now = ctx.computeOnClient(mc -> Lists.data().hudPosition);
+			check(now == corners[i], "clicking HUD Position moves to " + corners[i] + " (got " + now + ")");
+		}
+		// Back out to the game: the settings close (saving), then the list screen.
+		ctx.getInput().pressKey(InputConstants.KEY_ESCAPE);
+		ctx.waitForScreen(PocketListScreen.class);
+		ctx.getInput().pressKey(InputConstants.KEY_ESCAPE);
+		ctx.waitForScreen(null);
+		ctx.waitTicks(2);
+		ctx.takeScreenshot("pocket_list_hud_bottom_right");
+		try {
+			String saved = Files.readString(FabricLoader.getInstance().getConfigDir().resolve("pocket_list.json"));
+			check(saved.contains("BOTTOM_RIGHT"), "the HUD position is saved to the file");
+		} catch (java.io.IOException e) {
+			throw new AssertionError("couldn't read the saved lists", e);
+		}
+		ctx.runOnClient(mc -> Lists.data().hudPosition = Lists.HudPosition.TOP_LEFT);
+	}
+
+	/** A button on the current screen (searching inside option lists too) whose label contains the text. */
+	private static AbstractWidget widgetNamed(ClientGameTestContext ctx, String text) {
+		return ctx.computeOnClient(mc -> {
+			java.util.ArrayDeque<net.minecraft.client.gui.components.events.GuiEventListener> queue = new java.util.ArrayDeque<>(mc.gui.screen().children());
+			while (!queue.isEmpty()) {
+				net.minecraft.client.gui.components.events.GuiEventListener child = queue.poll();
+				if (child instanceof AbstractWidget widget && widget.getMessage().getString().contains(text)) {
+					return widget;
+				}
+				if (child instanceof net.minecraft.client.gui.components.events.ContainerEventHandler container) {
+					queue.addAll(container.children());
+				}
+			}
+			return null;
+		});
+	}
 
 	private static void welcome(ClientGameTestContext ctx) {
 		ctx.waitTicks(5);

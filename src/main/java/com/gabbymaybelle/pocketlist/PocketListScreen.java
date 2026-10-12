@@ -156,10 +156,10 @@ public class PocketListScreen extends Screen {
 				rebuildWidgets();
 			}
 		}).bounds(left + quarter + 4, bottom, quarter, 20).build());
-		addRenderableWidget(Button.builder(Component.translatable(Lists.data().hud ? "pocket_list.screen.hud_on" : "pocket_list.screen.hud_off"), b -> {
-			Lists.data().hud = !Lists.data().hud;
-			changed();
-		}).bounds(left + (quarter + 4) * 2, bottom, quarter, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.hud.tooltip"))).build());
+		addRenderableWidget(Button.builder(Component.translatable("pocket_list.screen.settings"), b -> {
+			Lists.save();
+			minecraft.gui.setScreen(new PocketListSettingsScreen(this));
+		}).bounds(left + (quarter + 4) * 2, bottom, quarter, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.settings.tooltip"))).build());
 		addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
 				.bounds(left + (quarter + 4) * 3, bottom, quarter, 20).build());
 

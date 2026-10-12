@@ -25,6 +25,8 @@ public final class Lists {
 	private static final long FLASH_MILLIS = 1500;
 	/** No line asks for more than this. */
 	public static final int MAX_NEED = 99_999;
+	/** The most lines the HUD will show. */
+	public static final int MAX_HUD_LINES = 20;
 
 	private static Data data = new Data();
 
@@ -33,12 +35,27 @@ public final class Lists {
 		public int active;
 		/** Show the active list in the corner of the screen. */
 		public boolean hud = true;
+		/** Which corner. */
+		public HudPosition hudPosition = HudPosition.TOP_LEFT;
 		/** Count what's in chests you've opened nearby. */
 		public boolean countChests = true;
 		/** At most this many lines on the HUD; the rest are summed up as "and 3 more". */
 		public int hudLines = 8;
 		/** The one-time "press K to start a list" toast has been shown. */
 		public boolean welcomed;
+	}
+
+	/** The corner of the screen the HUD sits in. */
+	public enum HudPosition {
+		TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT;
+
+		public boolean top() {
+			return this == TOP_LEFT || this == TOP_RIGHT;
+		}
+
+		public boolean right() {
+			return this == TOP_RIGHT || this == BOTTOM_RIGHT;
+		}
 	}
 
 	public static final class PocketListData {
@@ -135,6 +152,11 @@ public final class Lists {
 		if (data.lists == null) {
 			data.lists = new ArrayList<>();
 		}
+		if (data.hudPosition == null) {
+			// A corner name this version doesn't know (or none at all).
+			data.hudPosition = HudPosition.TOP_LEFT;
+		}
+		data.hudLines = Math.clamp(data.hudLines, 1, MAX_HUD_LINES);
 		for (PocketListData list : data.lists) {
 			if (list.entries == null) {
 				list.entries = new ArrayList<>();

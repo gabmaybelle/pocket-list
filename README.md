@@ -35,7 +35,16 @@ Press **K** to open your lists. From there you can:
 - search for an item by name and add it, with the amount box beside the search setting how many;
 - break a line down into its ingredients;
 - clear off everything you have enough of (Clear Done);
-- turn the HUD on or off.
+- open the settings.
+
+## Settings
+
+From the list screen's Settings button, or Mod Menu's Config button:
+
+- **HUD:** on or off.
+- **HUD Position:** which corner of the screen. It starts top-left; if a minimap lives there, move it.
+- **HUD Lines:** how many lines it shows (8 by default); the rest are summed up as "and 3 more".
+- **Count Nearby Chests:** on or off.
 
 Every key can be changed in Controls, under Pocket List. There's also a key to show or hide the HUD, which starts unbound.
 
@@ -57,15 +66,13 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 - On someone else's server without JEI or REI, Break down and recipe pinning only know the recipes you've unlocked. Adding items by name always works.
 - Chest memory goes by what was there when you last closed the chest. If a hopper or a friend moves things around, open it again to refresh it.
 
-To change how many lines the HUD shows (8 by default), edit `hudLines` in `config/pocket_list.json`.
-
 ## Requirements
 
 - Minecraft 26.3
 - Fabric Loader 0.19.5 or newer
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 
-Optional: [Mod Menu](https://modrinth.com/mod/modmenu) (its Config button opens your lists), [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei).
+Optional: [Mod Menu](https://modrinth.com/mod/modmenu) (its Config button opens the settings), [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei).
 
 ## For developers
 
