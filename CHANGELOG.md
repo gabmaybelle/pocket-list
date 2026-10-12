@@ -10,6 +10,6 @@ The first release.
 - Break down: swap a line for its ingredients, minus what you already have, choosing the recipe when there's more than one. In single player it knows every recipe, unlocked or not.
 - JEI and REI support: pin from their lists and recipe screens, and use their recipes. Both optional.
 - Counts your inventory, carried shulker boxes and bundles, whatever container is open, and chests you've opened nearby. Chest memory is saved per world and per server.
-- Settings (from the list screen or Mod Menu): HUD on or off, which corner it sits in, how many lines it shows, and whether nearby chests count.
+- Settings (from the list screen or Mod Menu): HUD on or off, which corner it sits in, how many lines it shows, and whether nearby chests count. With a minimap mod installed (Xaero's Minimap, JourneyMap or VoxelMap), the list starts bottom-right instead, out of the minimap's corner; your own choice stands once saved.
 - A one-time welcome note on first join.
 - Client-side only; works on any server.

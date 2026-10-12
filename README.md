@@ -42,7 +42,7 @@ Press **K** to open your lists. From there you can:
 From the list screen's Settings button, or Mod Menu's Config button:
 
 - **HUD:** on or off.
-- **HUD Position:** which corner of the screen. It starts top-left; if a minimap lives there, move it.
+- **HUD Position:** which corner of the screen. It starts top-left, or bottom-right when a minimap mod (Xaero's Minimap, JourneyMap or VoxelMap) is installed, so the two don't share a corner.
 - **HUD Lines:** how many lines it shows (8 by default); the rest are summed up as "and 3 more".
 - **Count Nearby Chests:** on or off.
 

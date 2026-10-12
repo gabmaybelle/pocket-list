@@ -131,8 +131,12 @@ public final class Lists {
 		}
 	}
 
+	/** Minimap mods that draw in the top-left corner, where the list would otherwise sit. */
+	private static final List<String> MINIMAP_MODS = List.of("xaerominimap", "journeymap", "voxelmap");
+
 	public static void load() {
-		if (Files.exists(FILE)) {
+		boolean firstRun = !Files.exists(FILE);
+		if (!firstRun) {
 			try (Reader reader = Files.newBufferedReader(FILE)) {
 				Data loaded = GSON.fromJson(reader, Data.class);
 				if (loaded != null) {
@@ -155,6 +159,10 @@ public final class Lists {
 		if (data.hudPosition == null) {
 			// A corner name this version doesn't know (or none at all).
 			data.hudPosition = HudPosition.TOP_LEFT;
+		}
+		if (firstRun && MINIMAP_MODS.stream().anyMatch(id -> FabricLoader.getInstance().isModLoaded(id))) {
+			// Keep out of a minimap's corner; once saved, the player's own choice stands.
+			data.hudPosition = HudPosition.BOTTOM_RIGHT;
 		}
 		data.hudLines = Math.clamp(data.hudLines, 1, MAX_HUD_LINES);
 		for (PocketListData list : data.lists) {
