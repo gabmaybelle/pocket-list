@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -176,10 +175,7 @@ public final class Lists {
 
 	public static void save() {
 		try {
-			Files.createDirectories(FILE.getParent());
-			try (Writer writer = Files.newBufferedWriter(FILE)) {
-				GSON.toJson(data, writer);
-			}
+			SafeFiles.write(FILE, writer -> GSON.toJson(data, writer));
 		} catch (IOException e) {
 			PocketList.LOGGER.warn("Couldn't save {}", FILE, e);
 		}

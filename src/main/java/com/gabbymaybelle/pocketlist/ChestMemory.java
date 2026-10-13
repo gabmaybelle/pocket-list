@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -213,10 +212,8 @@ public final class ChestMemory {
 			return;
 		}
 		try {
-			Files.createDirectories(file.getParent());
-			try (Writer writer = Files.newBufferedWriter(file)) {
-				GSON.toJson(new ArrayList<>(REMEMBERED.values()), writer);
-			}
+			List<Place> places = new ArrayList<>(REMEMBERED.values());
+			SafeFiles.write(file, writer -> GSON.toJson(places, writer));
 		} catch (IOException e) {
 			PocketList.LOGGER.warn("Couldn't save remembered chests to {}", file, e);
 		}

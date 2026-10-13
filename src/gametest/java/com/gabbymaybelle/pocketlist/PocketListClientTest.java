@@ -526,6 +526,21 @@ public class PocketListClientTest implements FabricClientGameTest {
 			check(Files.exists(file.resolveSibling("pocket_list.json.broken")), "a broken file is backed up");
 			Files.writeString(file, good);
 			Lists.load();
+
+			// A save that dies part-way (a crash, the power going) leaves the old file whole.
+			try {
+				SafeFiles.write(file, writer -> {
+					writer.write("{ \"lists\": [ half-writ");
+					writer.flush();
+					throw new java.io.IOException("the game stopped here");
+				});
+				check(false, "the interrupted save should have failed");
+			} catch (java.io.IOException expected) {
+				// As it would in a crash.
+			}
+			check(Files.readString(file).equals(good), "an interrupted save leaves the lists file as it was");
+			Lists.save();
+			check(!Files.exists(file.resolveSibling("pocket_list.json.tmp")), "the next save leaves no temporary file behind");
 		});
 	}
 

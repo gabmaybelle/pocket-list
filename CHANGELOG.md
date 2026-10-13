@@ -13,3 +13,4 @@ The first release.
 - Settings (from the list screen or Mod Menu): HUD on or off, which corner it sits in, how many lines it shows, and whether nearby chests count. With a minimap mod installed (Xaero's Minimap, JourneyMap or VoxelMap), the list starts bottom-right instead, out of the minimap's corner; your own choice stands once saved.
 - A one-time welcome note on first join.
 - Client-side only; works on any server.
+- Your lists and remembered chests are saved safely: if the game crashes while saving, the last good copy is kept rather than a half-written file.
