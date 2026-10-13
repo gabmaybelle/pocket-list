@@ -31,8 +31,8 @@ dependencies {
 	// Mod Menu: only for the Config button; not bundled or required.
 	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	// (Modrinth version ids: JEI 31.10.0.63, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
-	compileOnly "maven.modrinth:jei:xx7kXPHL"
+	// (Modrinth version ids: JEI 31.12.0.65, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
+	compileOnly "maven.modrinth:jei:csqmrfNS"
 	compileOnly "maven.modrinth:rei:rKsAE6bX"
 	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
 	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
@@ -40,7 +40,7 @@ dependencies {
 
 	// `./gradlew runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
 	if (project.findProperty("testViewer") == "jei") {
-		runtimeOnly "maven.modrinth:jei:xx7kXPHL"
+		runtimeOnly "maven.modrinth:jei:csqmrfNS"
 	} else if (project.findProperty("testViewer") == "rei") {
 		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
 		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"
