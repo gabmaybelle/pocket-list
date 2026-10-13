@@ -10,7 +10,7 @@ The first time you join a world, a note pops up: press **K** to open your lists.
 
 You can also add things while you play. Open your inventory or a crafting table and press **Z** over an item to add it, or over a recipe in the recipe book to add its ingredients. Hold **Shift** to add enough for a whole stack.
 
-While you play, the list sits in the top-left corner with a count for each line ("24/64 Oak Planks"). Lines turn green once you have enough, and when everything on the list is gathered, you get a little chime and a note to say so.
+While you play, the list sits in a corner of the screen (top-left, or bottom-right if you have a minimap) with a count for each line ("24/64 Oak Planks"). Lines turn green once you have enough, and when everything on the list is gathered, you get a little chime and a note to say so.
 
 ## Breaking things down
 
