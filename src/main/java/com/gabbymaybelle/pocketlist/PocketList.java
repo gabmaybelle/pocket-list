@@ -36,9 +36,9 @@ public final class PocketList implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		Lists.load();
-		openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.open", InputConstants.Type.KEYBOARD, InputConstants.KEY_K, CATEGORY));
-		pinKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.pin", InputConstants.Type.KEYBOARD, InputConstants.KEY_Z, CATEGORY));
-		hudKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.toggle_hud", InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), CATEGORY));
+		openKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.open", InputConstants.KEY_K, CATEGORY));
+		pinKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.pin", InputConstants.KEY_Z, CATEGORY));
+		hudKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.pocket_list.toggle_hud", InputConstants.UNKNOWN.getValue(), CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (openKey.consumeClick()) {
@@ -60,7 +60,7 @@ public final class PocketList implements ClientModInitializer {
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			if (!(screen instanceof PocketListScreen)) {
 				ScreenKeyboardEvents.allowKeyPress(screen).register((current, key) ->
-						!(pinKey.matches(key) && !current.isInputCaptured() && !Pins.typingInViewer()
+						!(pinKey.matches(key) && !Compat.typing(current) && !Pins.typingInViewer()
 								&& Pins.pinHovered(mc, current, key.hasShiftDown() || mc.hasShiftDown())));
 			}
 		});

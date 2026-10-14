@@ -68,7 +68,7 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 
 ## Requirements
 
-- Minecraft 26.3
+- Minecraft 26.2 or 26.3 (one jar works on both)
 - Fabric Loader 0.19.5 or newer
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 
@@ -76,7 +76,7 @@ Optional: [Mod Menu](https://modrinth.com/mod/modmenu) (its Config button opens 
 
 ## For developers
 
-`./gradlew runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list screen and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it again with that recipe viewer installed. Screenshots land in `build/run/clientGameTest/screenshots`.
+`./gradlew runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list screen and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it again with that recipe viewer installed, and `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2` to run it on 26.2 (JEI only there). `node tools/check-linkage.js <jar> <26.2 game jar>` checks the jar, which is built against 26.3, only calls game code 26.2 has too. Screenshots land in `build/run/clientGameTest/screenshots`.
 
 ## Licence
 

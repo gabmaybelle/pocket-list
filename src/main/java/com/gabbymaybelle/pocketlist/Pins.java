@@ -169,7 +169,7 @@ public final class Pins {
 
 	private static Entry toEntry(SlotDisplay slot, ContextMap context) {
 		if (slot instanceof SlotDisplay.TagSlotDisplay tagged) {
-			Optional<TagKey<Item>> key = tagged.tag().unwrapKey();
+			Optional<TagKey<Item>> key = Compat.tagOf(tagged);
 			if (key.isPresent()) {
 				return Entry.ofTag(key.get(), 1);
 			}

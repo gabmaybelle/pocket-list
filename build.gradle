@@ -39,8 +39,10 @@ dependencies {
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 
 	// `./gradlew runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
+	// On 26.2 (`-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`) JEI is 30.29.0.201
+	// (Modrinth id d3HeviSL); REI is only tested on 26.3.
 	if (project.findProperty("testViewer") == "jei") {
-		runtimeOnly "maven.modrinth:jei:csqmrfNS"
+		runtimeOnly project.minecraft_version == "26.2" ? "maven.modrinth:jei:d3HeviSL" : "maven.modrinth:jei:csqmrfNS"
 	} else if (project.findProperty("testViewer") == "rei") {
 		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
 		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"

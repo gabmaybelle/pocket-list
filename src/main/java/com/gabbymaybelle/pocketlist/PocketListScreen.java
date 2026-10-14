@@ -14,6 +14,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -318,8 +319,14 @@ public class PocketListScreen extends Screen {
 		int left = (width - panel) / 2;
 		int right = left + panel;
 		if (list.entries.isEmpty()) {
-			graphics.textWithWordWrap(font, Component.translatable("pocket_list.screen.empty", PocketList.pinKey.getTranslatedKeyMessage()),
-					left, TOP + 4, panel, MUTED);
+			// Wrapped line by line: textWithWordWrap returns a value on 26.3 but not on 26.2, so one jar
+			// can't call it on both.
+			int y = TOP + 4;
+			for (FormattedCharSequence line : font.split(Component.translatable("pocket_list.screen.empty",
+					PocketList.pinKey.getTranslatedKeyMessage()), panel)) {
+				graphics.text(font, line, left, y, MUTED, true);
+				y += font.lineHeight;
+			}
 		}
 		for (int i = 0; i < rowsPerPage; i++) {
 			int index = page * rowsPerPage + i;
@@ -367,7 +374,7 @@ public class PocketListScreen extends Screen {
 	@Override
 	public boolean keyPressed(KeyEvent event) {
 		// The open key closes it again, unless you're typing.
-		if (PocketList.openKey.matches(event) && !isInputCaptured()) {
+		if (PocketList.openKey.matches(event) && !Compat.typing(this)) {
 			onClose();
 			return true;
 		}

@@ -1,6 +1,6 @@
 # Pocket List
 
-A client-side Fabric mod for Minecraft 26.3 (mod ID `pocket_list`): a checklist of what you're
+A client-side Fabric mod for Minecraft 26.2 and 26.3, one jar for both (mod ID `pocket_list`): a checklist of what you're
 gathering, in a corner of the screen, that counts as you collect. See README.md for what
 players get.
 
@@ -16,7 +16,8 @@ players get.
 - `./gradlew build`: jar in `build/libs/`.
 - `./gradlew runClientGameTest`: counting, chest memory, pinning, typed amounts, Break down, the
   list and settings screens and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it
-  again with that recipe viewer installed.
+  again with that recipe viewer installed. Add `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`
+  for 26.2 (JEI 30.29 there; REI only on 26.3).
 
 ## Gotchas
 
@@ -25,6 +26,10 @@ players get.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
   top-left otherwise.
 - The Espresso Flavoured modpack carries a copy of this jar in its `client-overrides/mods/`.
+- **One jar for 26.2 and 26.3.** It's built against 26.3. The few game calls that differ between
+  the versions go through `Compat.java` (looked up by name). A method that kept its name but
+  changed its return type compiles on both and still crashes on the other, so CI runs
+  `tools/check-linkage.js` on the jar against 26.2's game code, and runs the game test on 26.2.
 
 ## Working on Gabby's mods (the same in every repo)
 

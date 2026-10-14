@@ -97,7 +97,7 @@ public final class Counter {
 		}
 		BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
 		if (bundle != null) {
-			bundle.itemCopies().forEach(inner -> add(inner, into, depth + 1));
+			bundle.items().forEach(inner -> add(inner.create(), into, depth + 1));
 		}
 	}
 }

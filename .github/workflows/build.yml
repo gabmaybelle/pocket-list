@@ -1,6 +1,6 @@
 # Builds the mod on every push and pull request, then runs the in-game test (src/gametest) on a
 # virtual display, so a broken build or a crash in game shows up straight away. The test also runs
-# with each optional mod the mod works with installed (JEI, REI). The built jars
+# with each optional mod the mod works with installed (JEI, REI), and on Minecraft 26.2. The built jars
 # are attached to each run under "Artifacts", and the game test's screenshots alongside them.
 
 name: build
@@ -24,6 +24,10 @@ jobs:
             test_args: '-PtestViewer=jei'
           - variant: 'with REI'
             test_args: '-PtestViewer=rei'
+          - variant: 'Minecraft 26.2'
+            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2'
+          - variant: 'Minecraft 26.2 with JEI'
+            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2 -PtestViewer=jei'
     name: build (${{ matrix.variant }})
     steps:
       - name: checkout repository
@@ -41,6 +45,15 @@ jobs:
         run: chmod +x ./gradlew
       - name: build
         run: ./gradlew build
+      - name: the jar only calls what 26.2 has
+        # The jar players get is built against 26.3. A game method that kept its name but changed
+        # its return type compiles on both versions and still crashes on 26.2, so check the jar
+        # itself against 26.2's game code (fetched by compiling for 26.2).
+        if: matrix.variant == 'on its own'
+        run: |
+          cp build/libs/pocket-list-*[0-9].jar /tmp/pocket-list.jar
+          ./gradlew compileJava -Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2
+          node tools/check-linkage.js /tmp/pocket-list.jar "$(find ~/.gradle/caches/fabric-loom -name 'minecraft-merged-deobf-26.2.jar' | head -1)"
       - name: install EGL
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libegl1 libegl-mesa0
       - name: run game test
