@@ -10,7 +10,7 @@ The first time you join a world, a note pops up: press **K** to open your lists.
 
 You can also add things while you play. Open your inventory or a crafting table and press **Z** over an item to add it, or over a recipe in the recipe book to add its ingredients. Hold **Shift** to add enough for a whole stack.
 
-While you play, the list sits in a corner of the screen (top-left, or bottom-right if you have a minimap) with a count for each line ("24/64 Oak Planks"). Lines turn green once you have enough, and when everything on the list is gathered, you get a little chime and a note to say so.
+While you play, the list sits in a corner of the screen (top-left, or another corner if a minimap or HUD mod is using that one) with a count for each line ("24/64 Oak Planks"). Lines turn green once you have enough, and when everything on the list is gathered, you get a little chime and a note to say so.
 
 ## Breaking things down
 
@@ -42,7 +42,7 @@ Press **K** to open your lists. From there you can:
 From the list screen's Settings button, or Mod Menu's Config button:
 
 - **HUD:** on or off.
-- **HUD Position:** which corner of the screen. It starts top-left, or bottom-right when a minimap mod (Xaero's Minimap, JourneyMap or VoxelMap) is installed, so the two don't share a corner.
+- **HUD Position:** which corner of the screen. It starts top-left, or bottom-right when a minimap mod (Xaero's Minimap, JourneyMap or VoxelMap) is installed, or top-right with Simple HUD Enhanced, whose text fills the top left. In the top-right corner the list sits below any effect icons.
 - **HUD Lines:** how many lines it shows (8 by default); the rest are summed up as "and 3 more".
 - **Count Nearby Chests:** on or off.
 

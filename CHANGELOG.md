@@ -14,4 +14,5 @@ The first release.
 - A one-time welcome note on first join.
 - Client-side only; works on any server.
 - Works on Minecraft 26.2 as well as 26.3, in the same jar.
+- With Simple HUD Enhanced installed, the list starts in the top-right corner, out of the way of its text. In the top right, the list now sits below your effect icons instead of covering them.
 - Your lists and remembered chests are saved safely: if the game crashes while saving, the last good copy is kept rather than a half-written file.

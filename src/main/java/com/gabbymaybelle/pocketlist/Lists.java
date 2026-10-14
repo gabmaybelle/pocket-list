@@ -132,6 +132,8 @@ public final class Lists {
 
 	/** Minimap mods that draw in the top-left corner, where the list would otherwise sit. */
 	private static final List<String> MINIMAP_MODS = List.of("xaerominimap", "journeymap", "voxelmap");
+	/** HUD mods that fill the top-left corner with text, but leave the top right free. */
+	private static final List<String> TOP_LEFT_HUD_MODS = List.of("simplehudenhanced");
 
 	public static void load() {
 		boolean firstRun = !Files.exists(FILE);
@@ -162,6 +164,9 @@ public final class Lists {
 		if (firstRun && MINIMAP_MODS.stream().anyMatch(id -> FabricLoader.getInstance().isModLoaded(id))) {
 			// Keep out of a minimap's corner; once saved, the player's own choice stands.
 			data.hudPosition = HudPosition.BOTTOM_RIGHT;
+		} else if (firstRun && TOP_LEFT_HUD_MODS.stream().anyMatch(id -> FabricLoader.getInstance().isModLoaded(id))) {
+			// A HUD mod's text is in the top left: start top right, below any effect icons.
+			data.hudPosition = HudPosition.TOP_RIGHT;
 		}
 		data.hudLines = Math.clamp(data.hudLines, 1, MAX_HUD_LINES);
 		for (PocketListData list : data.lists) {

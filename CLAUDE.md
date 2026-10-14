@@ -24,7 +24,7 @@ players get.
 - **Fair play is a promise.** Pocket List never sends anything to a server and only counts what
   the player has seen: no scanning unopened chests, no finding blocks through walls. Keep it so.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
-  top-left otherwise.
+  top-right with Simple HUD Enhanced, top-left otherwise. Top right sits below the effect icons.
 - The Espresso Flavoured modpack carries a copy of this jar in its `client-overrides/mods/`.
 - **One jar for 26.2 and 26.3.** It's built against 26.3. The few game calls that differ between
   the versions go through `Compat.java` (looked up by name). A method that kept its name but

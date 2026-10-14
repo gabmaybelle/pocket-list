@@ -8,9 +8,11 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
+import net.minecraft.world.effect.MobEffectInstance;
 
 /** The active list in the top-left corner: one line per thing, still-to-gather first. */
 public final class PocketHud {
@@ -73,7 +75,7 @@ public final class PocketHud {
 		int boxHeight = height + PADDING * 2;
 		Lists.HudPosition position = Lists.data().hudPosition;
 		int x = position.right() ? graphics.guiWidth() - MARGIN - boxWidth : MARGIN;
-		int y = position.top() ? MARGIN : graphics.guiHeight() - MARGIN - boxHeight;
+		int y = !position.top() ? graphics.guiHeight() - MARGIN - boxHeight : position.right() ? belowEffects(mc) : MARGIN;
 		if (!position.top() && x < graphics.guiWidth() / 2 + HOTBAR_HALF_WIDTH && x + boxWidth > graphics.guiWidth() / 2 - HOTBAR_HALF_WIDTH) {
 			// On a narrow screen a bottom corner would run into the hotbar and the bars above it: sit above them.
 			y -= HOTBAR_BLOCK;
@@ -101,5 +103,33 @@ public final class PocketHud {
 	/** "24/64 Oak Planks". */
 	private static Component line(Entry entry) {
 		return Component.translatable("pocket_list.hud.line", Math.min(entry.have(), entry.need), entry.need, entry.name());
+	}
+
+	/** Height of a row of vanilla effect icons, including the gap below it. */
+	private static final int EFFECT_ROW = 26;
+
+	/**
+	 * In the top-right corner, the list sits below the effect icons vanilla draws there:
+	 * beneficial effects in a row at y 1-25, harmful ones in a second row at y 27-51 (both 15
+	 * lower in the demo). The icons are hidden while a screen that lists effects itself is open.
+	 */
+	static int belowEffects(Minecraft mc) {
+		Screen screen = mc.gui.screen();
+		if (screen != null && screen.showsActiveEffects()) {
+			return MARGIN;
+		}
+		boolean beneficial = false;
+		boolean harmful = false;
+		for (MobEffectInstance effect : mc.player.getActiveEffects()) {
+			if (effect.showIcon()) {
+				if (effect.getEffect().value().isBeneficial()) {
+					beneficial = true;
+				} else {
+					harmful = true;
+				}
+			}
+		}
+		int top = mc.isDemo() ? 16 : 1;
+		return harmful ? top + EFFECT_ROW * 2 + MARGIN - 1 : beneficial ? top + EFFECT_ROW + MARGIN - 1 : MARGIN;
 	}
 }

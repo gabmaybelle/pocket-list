@@ -71,6 +71,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 			breakDown(ctx, server);
 			finishedToast(ctx, server);
 			settings(ctx);
+			belowEffectIcons(ctx, server);
 			saving(ctx);
 			save = world.getWorldSave();
 		}
@@ -130,6 +131,23 @@ public class PocketListClientTest implements FabricClientGameTest {
 			throw new AssertionError("couldn't read the saved lists", e);
 		}
 		ctx.runOnClient(mc -> Lists.data().hudPosition = Lists.HudPosition.TOP_LEFT);
+	}
+
+	/** In the top-right corner the list moves down below the effect icons, one row or two. */
+	private static void belowEffectIcons(ClientGameTestContext ctx, TestServerContext server) {
+		server.runCommand("effect clear @a");
+		ctx.waitTicks(3);
+		int none = ctx.computeOnClient(PocketHud::belowEffects);
+		server.runCommand("effect give @a speed 60 0");
+		ctx.waitTicks(3);
+		int beneficial = ctx.computeOnClient(PocketHud::belowEffects);
+		server.runCommand("effect give @a poison 60 0");
+		ctx.waitTicks(3);
+		int harmful = ctx.computeOnClient(PocketHud::belowEffects);
+		server.runCommand("effect clear @a");
+		check(none == 4, "with no effects the list sits at the top (y " + none + ")");
+		check(beneficial == 30, "below the row of beneficial effect icons (y " + beneficial + ")");
+		check(harmful == 56, "below the second row once there's a harmful effect (y " + harmful + ")");
 	}
 
 	/** A button on the current screen (searching inside option lists too) whose label contains the text. */
