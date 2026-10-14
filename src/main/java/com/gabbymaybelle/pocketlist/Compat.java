@@ -61,7 +61,7 @@ final class Compat {
 				return set.unwrapKey().map(key -> (TagKey<Item>) key);
 			}
 		} catch (ReflectiveOperationException e) {
-			PocketList.LOGGER.warn("Couldn't read a recipe's tag", e);
+			PocketList.LOGGER.warn("Pocket List: couldn't read a recipe's tag", e);
 		}
 		return Optional.empty();
 	}

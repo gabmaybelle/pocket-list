@@ -26,7 +26,7 @@ public final class Viewers {
 			}
 		} catch (LinkageError e) {
 			// A viewer version whose API changed: carry on without it.
-			PocketList.LOGGER.warn("Couldn't connect to a recipe viewer; pinning from it won't work", e);
+			PocketList.LOGGER.warn("Pocket List: couldn't connect to a recipe viewer; pinning from it won't work", e);
 		}
 	}
 

@@ -203,7 +203,7 @@ public final class ChestMemory {
 				}
 			}
 		} catch (IOException | RuntimeException e) {
-			PocketList.LOGGER.warn("Couldn't read remembered chests from {}; starting fresh", file, e);
+			PocketList.LOGGER.warn("Pocket List: couldn't read remembered chests from {}; starting fresh", file, e);
 		}
 	}
 
@@ -215,7 +215,7 @@ public final class ChestMemory {
 			List<Place> places = new ArrayList<>(REMEMBERED.values());
 			SafeFiles.write(file, writer -> GSON.toJson(places, writer));
 		} catch (IOException e) {
-			PocketList.LOGGER.warn("Couldn't save remembered chests to {}", file, e);
+			PocketList.LOGGER.warn("Pocket List: couldn't save remembered chests to {}", file, e);
 		}
 	}
 

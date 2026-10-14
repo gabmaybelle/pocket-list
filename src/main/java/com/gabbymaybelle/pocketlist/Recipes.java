@@ -42,7 +42,7 @@ public final class Recipes {
 				try {
 					found = viewer.recipesFor(item);
 				} catch (LinkageError | RuntimeException e) {
-					PocketList.LOGGER.warn("A recipe viewer couldn't look up recipes", e);
+					PocketList.LOGGER.warn("Pocket List: a recipe viewer couldn't look up recipes", e);
 				}
 				if (!found.isEmpty()) {
 					break;
@@ -77,7 +77,7 @@ public final class Recipes {
 			}
 			return out;
 		} catch (RuntimeException e) {
-			PocketList.LOGGER.warn("Couldn't read the world's recipes", e);
+			PocketList.LOGGER.warn("Pocket List: couldn't read the world's recipes", e);
 			return List.of();
 		}
 	}

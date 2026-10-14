@@ -147,11 +147,11 @@ public final class Lists {
 			} catch (IOException | RuntimeException e) {
 				// Keep the broken file, so the next save doesn't quietly replace someone's lists.
 				Path backup = FILE.resolveSibling("pocket_list.json.broken");
-				PocketList.LOGGER.warn("Couldn't read {}, starting with an empty list; the old file is kept as {}", FILE, backup, e);
+				PocketList.LOGGER.warn("Pocket List: couldn't read {}, starting with an empty list; the old file is kept as {}", FILE, backup, e);
 				try {
 					Files.copy(FILE, backup, StandardCopyOption.REPLACE_EXISTING);
 				} catch (IOException copyFailed) {
-					PocketList.LOGGER.warn("Couldn't back up {}", FILE, copyFailed);
+					PocketList.LOGGER.warn("Pocket List: couldn't back up {}", FILE, copyFailed);
 				}
 			}
 		}
@@ -183,7 +183,7 @@ public final class Lists {
 		try {
 			SafeFiles.write(FILE, writer -> GSON.toJson(data, writer));
 		} catch (IOException e) {
-			PocketList.LOGGER.warn("Couldn't save {}", FILE, e);
+			PocketList.LOGGER.warn("Pocket List: couldn't save {}", FILE, e);
 		}
 	}
 }
