@@ -7,9 +7,7 @@ import com.gabbymaybelle.pocketlist.mixin.RecipeBookPageAccessor;
 import com.gabbymaybelle.pocketlist.compat.RecipeViewer;
 import com.gabbymaybelle.pocketlist.compat.Viewers;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -154,17 +152,14 @@ public final class Pins {
 			case SmithingRecipeDisplay smithing -> List.of(smithing.template(), smithing.base(), smithing.addition());
 			default -> List.of();
 		};
-		Map<String, Entry> merged = new LinkedHashMap<>();
+		List<Entry> entries = new ArrayList<>();
 		for (SlotDisplay slot : slots) {
 			Entry entry = toEntry(slot, context);
 			if (entry != null) {
-				merged.merge(entry.key(), entry, (a, b) -> {
-					a.need += b.need;
-					return a;
-				});
+				entries.add(entry);
 			}
 		}
-		return new ArrayList<>(merged.values());
+		return Recipes.merge(entries);
 	}
 
 	private static Entry toEntry(SlotDisplay slot, ContextMap context) {

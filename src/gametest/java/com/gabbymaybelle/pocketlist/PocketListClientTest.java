@@ -2,10 +2,13 @@ package com.gabbymaybelle.pocketlist;
 
 import com.gabbymaybelle.pocketlist.mixin.AbstractRecipeBookScreenAccessor;
 import com.gabbymaybelle.pocketlist.mixin.RecipeBookComponentAccessor;
+import com.gabbymaybelle.pocketlist.compat.Viewers;
 import com.mojang.blaze3d.platform.InputConstants;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,12 +16,14 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.toasts.SystemToast;
-import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -28,10 +33,12 @@ import net.minecraft.client.gui.screens.recipebook.RecipeBookPage;
 import net.minecraft.client.gui.screens.recipebook.RecipeButton;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
@@ -127,7 +134,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		try {
 			String saved = Files.readString(FabricLoader.getInstance().getConfigDir().resolve("pocket_list.json"));
 			check(saved.contains("BOTTOM_RIGHT"), "the HUD position is saved to the file");
-		} catch (java.io.IOException e) {
+		} catch (IOException e) {
 			throw new AssertionError("couldn't read the saved lists", e);
 		}
 		ctx.runOnClient(mc -> Lists.data().hudPosition = Lists.HudPosition.TOP_LEFT);
@@ -153,13 +160,13 @@ public class PocketListClientTest implements FabricClientGameTest {
 	/** A button on the current screen (searching inside option lists too) whose label contains the text. */
 	private static AbstractWidget widgetNamed(ClientGameTestContext ctx, String text) {
 		return ctx.computeOnClient(mc -> {
-			java.util.ArrayDeque<net.minecraft.client.gui.components.events.GuiEventListener> queue = new java.util.ArrayDeque<>(mc.gui.screen().children());
+			ArrayDeque<GuiEventListener> queue = new ArrayDeque<>(mc.gui.screen().children());
 			while (!queue.isEmpty()) {
-				net.minecraft.client.gui.components.events.GuiEventListener child = queue.poll();
+				GuiEventListener child = queue.poll();
 				if (child instanceof AbstractWidget widget && widget.getMessage().getString().contains(text)) {
 					return widget;
 				}
-				if (child instanceof net.minecraft.client.gui.components.events.ContainerEventHandler container) {
+				if (child instanceof ContainerEventHandler container) {
 					queue.addAll(container.children());
 				}
 			}
@@ -338,7 +345,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.waitTick();
 		check(needs(ctx).equals(before), "typing z in the recipe viewer's search doesn't pin anything");
 
-		check(!ctx.computeOnClient(mc -> com.gabbymaybelle.pocketlist.compat.Viewers.all().getFirst().recipesFor(Items.LANTERN)).isEmpty(),
+		check(!ctx.computeOnClient(mc -> Viewers.all().getFirst().recipesFor(Items.LANTERN)).isEmpty(),
 				"the recipe viewer knows how to make a lantern");
 		close(ctx);
 	}
@@ -524,13 +531,13 @@ public class PocketListClientTest implements FabricClientGameTest {
 	private static void saving(ClientGameTestContext ctx) {
 		try {
 			savingOrThrow(ctx);
-		} catch (java.io.IOException e) {
+		} catch (IOException e) {
 			throw new AssertionError(e);
 		}
 	}
 
-	private static void savingOrThrow(ClientGameTestContext ctx) throws java.io.IOException {
-		ctx.<java.io.IOException>runOnClient(mc -> {
+	private static void savingOrThrow(ClientGameTestContext ctx) throws IOException {
+		ctx.<IOException>runOnClient(mc -> {
 			Path file = FabricLoader.getInstance().getConfigDir().resolve("pocket_list.json");
 			int entries = Lists.active().entries.size();
 			Lists.save();
@@ -550,10 +557,10 @@ public class PocketListClientTest implements FabricClientGameTest {
 				SafeFiles.write(file, writer -> {
 					writer.write("{ \"lists\": [ half-writ");
 					writer.flush();
-					throw new java.io.IOException("the game stopped here");
+					throw new IOException("the game stopped here");
 				});
 				check(false, "the interrupted save should have failed");
-			} catch (java.io.IOException expected) {
+			} catch (IOException expected) {
 				// As it would in a crash.
 			}
 			check(Files.readString(file).equals(good), "an interrupted save leaves the lists file as it was");
@@ -565,9 +572,9 @@ public class PocketListClientTest implements FabricClientGameTest {
 	// ------------------------------------------------------------------ helpers
 
 	/** Gives items and waits until they've reached the client's inventory. */
-	private static void give(ClientGameTestContext ctx, TestServerContext server, net.minecraft.world.item.Item item, int count) {
+	private static void give(ClientGameTestContext ctx, TestServerContext server, Item item, int count) {
 		int before = ctx.computeOnClient(mc -> mc.player.getInventory().countItem(item));
-		server.runCommand("give @a " + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item) + " " + count);
+		server.runCommand("give @a " + BuiltInRegistries.ITEM.getKey(item) + " " + count);
 		ctx.waitFor(mc -> mc.player.getInventory().countItem(item) >= before + count);
 	}
 
@@ -600,7 +607,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.waitTicks(3);
 	}
 
-	private static void hoverSlotWith(ClientGameTestContext ctx, net.minecraft.world.item.Item item) {
+	private static void hoverSlotWith(ClientGameTestContext ctx, Item item) {
 		int[] at = ctx.computeOnClient(mc -> {
 			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.gui.screen();
 			int left = (int) field(screen, AbstractContainerScreen.class, "leftPos");
@@ -655,14 +662,6 @@ public class PocketListClientTest implements FabricClientGameTest {
 		List<RecipeButton> buttons = ((List<RecipeButton>) field(page, RecipeBookPage.class, "buttons")).stream().filter(b -> b.visible).toList();
 		check(!buttons.isEmpty(), "the recipe book shows recipes");
 		return buttons;
-	}
-
-	private static Map<String, Integer> needs(Minecraft mc) {
-		Map<String, Integer> out = new HashMap<>();
-		for (Entry e : Lists.active().entries) {
-			out.put(e.key(), e.need);
-		}
-		return out;
 	}
 
 	private static Map<String, Integer> needs(ClientGameTestContext ctx) {

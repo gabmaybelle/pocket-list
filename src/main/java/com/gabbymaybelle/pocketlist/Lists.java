@@ -87,18 +87,28 @@ public final class Lists {
 
 	/** Adds to the active list, topping up a line that's already there. */
 	public static void add(Entry entry) {
+		List<Entry> entries = active().entries;
+		topUp(entries, entry, entries.size());
+	}
+
+	/**
+	 * Tops up the line with this entry's key, or puts the entry in at {@code index} when there's no
+	 * such line. Either way the line is highlighted on the HUD for a moment. True if a line was added.
+	 */
+	private static boolean topUp(List<Entry> entries, Entry entry, int index) {
 		if (entry.need <= 0) {
-			return;
+			return false;
 		}
-		PocketListData list = active();
-		Entry existing = list.entries.stream().filter(e -> e.key().equals(entry.key())).findFirst().orElse(null);
+		Entry existing = entries.stream().filter(e -> e.key().equals(entry.key())).findFirst().orElse(null);
 		if (existing == null) {
-			list.entries.add(entry);
+			entry.need = Math.min(MAX_NEED, entry.need);
+			entries.add(Math.min(index, entries.size()), entry);
 			existing = entry;
 		} else {
 			existing.need = Math.min(MAX_NEED, existing.need + entry.need);
 		}
 		existing.flashUntil = Util.getMillis() + FLASH_MILLIS;
+		return existing == entry;
 	}
 
 	/**
@@ -115,17 +125,8 @@ public final class Lists {
 		int crafts = (stillNeeded + recipe.makes() - 1) / recipe.makes();
 		entries.remove(index);
 		for (Entry ingredient : recipe.ingredientsTimes(crafts)) {
-			if (ingredient.need <= 0) {
-				continue;
-			}
-			Entry existing = entries.stream().filter(e -> e.key().equals(ingredient.key())).findFirst().orElse(null);
-			if (existing != null) {
-				existing.need = Math.min(MAX_NEED, existing.need + ingredient.need);
-				existing.flashUntil = Util.getMillis() + FLASH_MILLIS;
-			} else {
-				ingredient.need = Math.min(MAX_NEED, ingredient.need);
-				ingredient.flashUntil = Util.getMillis() + FLASH_MILLIS;
-				entries.add(Math.min(index++, entries.size()), ingredient);
+			if (topUp(entries, ingredient, index)) {
+				index++;
 			}
 		}
 	}
