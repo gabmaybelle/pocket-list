@@ -26,6 +26,15 @@ it first, and add this session's row before ending.
 
 - **Fair play is a promise.** Pocket List never sends anything to a server and only counts what
   the player has seen: no scanning unopened chests, no finding blocks through walls. Keep it so.
+  Blocks that hold things without a screen (shelves, Espresso Flavoured's
+  canisters and jars, anything with Fabric item storage whose contents the server sends to every
+  game) are read through `ItemStorage.SIDED` in `ChestMemory`, but only after the player has used
+  that block, and they're kept live while the player is within 32 blocks. A chest read that way
+  shows empty on the player's side, so chests stay on the screen path.
+- Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes, which
+  covers Espresso's espresso machine through its JEI page); Mod Menu; the minimap and Simple HUD
+  corner defaults; Mighty Mail's mailboxes open a chest menu and are remembered like chests.
+  Nightfall Clock sits above the hotbar by default, so the corners are free.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
   top-right with Simple HUD Enhanced, top-left otherwise. Top right sits below the effect icons.
 - The Espresso Flavoured modpack carries a copy of this jar in its `client-overrides/mods/`.

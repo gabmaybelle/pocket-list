@@ -34,6 +34,7 @@ import net.minecraft.client.gui.screens.recipebook.RecipeButton;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
@@ -60,42 +61,62 @@ public class PocketListClientTest implements FabricClientGameTest {
 		}
 		TestWorldSave save;
 		try (TestSingleplayerContext world = ctx.worldBuilder().create()) {
-			world.getConnection().waitForChunksRender();
-			welcome(ctx);
-			TestServerContext server = world.getServer();
-			server.runCommand("gamemode survival @a");
-			server.runCommand("recipe give @a *");
-			server.runCommand("clear @a");
-
-			counting(ctx, server);
-			chestMemory(ctx, server);
-			creativePickerDoesNotCount(ctx, server);
-			pinItems(ctx);
-			pinRecipe(ctx);
-			typingInRecipeSearchDoesNotPin(ctx);
-			listScreen(ctx);
-			typedAmounts(ctx);
-			breakDown(ctx, server);
-			finishedToast(ctx, server);
-			settings(ctx);
-			belowEffectIcons(ctx, server);
-			saving(ctx);
+			// Logged here as well, because leaving the world after a failed check can hang the test
+			// framework, and then the failure itself never gets printed.
+			try {
+				play(ctx, world);
+			} catch (RuntimeException | Error e) {
+				PocketList.LOGGER.error("Pocket List test failed", e);
+				throw e;
+			}
 			save = world.getWorldSave();
 		}
-		// Back into the same world: the chests opened earlier are still remembered.
+		// Back into the same world: the chests opened earlier, and the pot, are still remembered.
 		try (TestSingleplayerContext world = save.open()) {
-			world.getConnection().waitForChunksRender();
-			ctx.runOnClient(mc -> {
-				Lists.data().lists.clear();
-				Lists.add(Entry.ofItem(Items.IRON_INGOT, 5));
-			});
-			recount(ctx);
-			expectHave(ctx, "minecraft:iron_ingot", 4);
-			check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.WELCOME)) == null,
-					"the welcome toast only shows once");
-			if (FabricLoader.getInstance().isModLoaded("jei") || FabricLoader.getInstance().isModLoaded("roughlyenoughitems")) {
-				recipeViewer(ctx, world.getServer());
+			try {
+				playAgain(ctx, world);
+			} catch (RuntimeException | Error e) {
+				PocketList.LOGGER.error("Pocket List test failed", e);
+				throw e;
 			}
+		}
+	}
+
+	private static void play(ClientGameTestContext ctx, TestSingleplayerContext world) {
+		world.getConnection().waitForChunksRender();
+		welcome(ctx);
+		TestServerContext server = world.getServer();
+		server.runCommand("gamemode survival @a");
+		server.runCommand("recipe give @a *");
+		server.runCommand("clear @a");
+
+		counting(ctx, server);
+		chestMemory(ctx, server);
+		creativePickerDoesNotCount(ctx, server);
+		pinItems(ctx);
+		pinRecipe(ctx);
+		typingInRecipeSearchDoesNotPin(ctx);
+		listScreen(ctx);
+		typedAmounts(ctx);
+		breakDown(ctx, server);
+		finishedToast(ctx, server);
+		settings(ctx);
+		belowEffectIcons(ctx, server);
+		saving(ctx);
+	}
+
+	private static void playAgain(ClientGameTestContext ctx, TestSingleplayerContext world) {
+		world.getConnection().waitForChunksRender();
+		ctx.runOnClient(mc -> {
+			Lists.data().lists.clear();
+			Lists.add(Entry.ofItem(Items.IRON_INGOT, 5));
+		});
+		recount(ctx);
+		expectHave(ctx, "minecraft:iron_ingot", 7);
+		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.WELCOME)) == null,
+				"the welcome toast only shows once");
+		if (FabricLoader.getInstance().isModLoaded("jei") || FabricLoader.getInstance().isModLoaded("roughlyenoughitems")) {
+			recipeViewer(ctx, world.getServer());
 		}
 	}
 
@@ -363,11 +384,13 @@ public class PocketListClientTest implements FabricClientGameTest {
 			Lists.add(Entry.ofItem(Items.TORCH, 16));
 			Lists.add(Entry.ofItem(Items.IRON_INGOT, 5));
 		});
-		server.runCommand("give @a oak_log 6");
-		server.runCommand("give @a spruce_log 6");
-		server.runCommand("give @a stick 3");
+		give(ctx, server, Items.OAK_LOG, 6);
+		give(ctx, server, Items.SPRUCE_LOG, 6);
+		give(ctx, server, Items.STICK, 3);
 		server.runCommand("give @a bundle[bundle_contents=[{id:\"minecraft:torch\",count:10}]]");
 		server.runCommand("give @a white_shulker_box[container=[{slot:0,item:{id:\"minecraft:cobblestone\",count:64}}]]");
+		// On a slow computer the items take a few ticks to reach the player's game.
+		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.BUNDLE) >= 1 && mc.player.getInventory().countItem(BuiltInRegistries.ITEM.getOptional(Identifier.parse("minecraft:white_shulker_box")).orElseThrow()) >= 1);
 		recount(ctx);
 		expectHave(ctx, "#minecraft:logs", 12);
 		expectHave(ctx, "minecraft:stick", 3);
@@ -397,6 +420,43 @@ public class PocketListClientTest implements FabricClientGameTest {
 		// Ender chests are never remembered.
 		openAndClose(ctx, ender, ContainerScreen.class);
 		expectHave(ctx, "minecraft:iron_ingot", 4);
+
+		// A shelf holds things without opening a screen. Using it with ingots in hand puts them on
+		// it, and the shelf is remembered through its item storage (the same way a canister from
+		// another mod would be).
+		BlockPos shelf = here.offset(2, 0, 2);
+		server.runCommand(setblock(shelf, "oak_shelf[facing=north]"));
+		server.runCommand("item replace entity @a hotbar.8 with iron_ingot 2");
+		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) == 2);
+		ctx.runOnClient(mc -> mc.player.getInventory().setSelectedSlot(8));
+		world(ctx);
+		// The middle of the shelf's front.
+		ctx.runOnClient(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
+				new BlockHitResult(Vec3.atCenterOf(shelf).add(0, 0, -0.5), Direction.NORTH, shelf, false)));
+		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) < 2);
+		int inHand = ctx.computeOnClient(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT));
+		ctx.waitTicks(ChestMemory.STORAGE_WAIT + 5);
+		recount(ctx);
+		// Four in the chests, and the two ingots split between the hand and the shelf.
+		expectHave(ctx, "minecraft:iron_ingot", 6);
+		ctx.runOnClient(mc -> Lists.data().countChests = false);
+		recount(ctx);
+		expectHave(ctx, "minecraft:iron_ingot", inHand);
+		ctx.runOnClient(mc -> Lists.data().countChests = true);
+		// Shelves tell every game what they hold, so when something else changes it (a hopper, say)
+		// the count follows without using it again.
+		String at = shelf.getX() + " " + shelf.getY() + " " + shelf.getZ();
+		server.runCommand("item replace block " + at + " container.0 with iron_ingot 3");
+		server.runCommand("item replace block " + at + " container.1 with air");
+		server.runCommand("item replace block " + at + " container.2 with air");
+		world(ctx);
+		recount(ctx);
+		expectHave(ctx, "minecraft:iron_ingot", 7 + inHand);
+		server.runCommand("clear @a iron_ingot");
+		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) == 0);
+		ctx.runOnClient(mc -> mc.player.getInventory().setSelectedSlot(0));
+		recount(ctx);
+		expectHave(ctx, "minecraft:iron_ingot", 7);
 	}
 
 	private static void creativePickerDoesNotCount(ClientGameTestContext ctx, TestServerContext server) {
@@ -591,9 +651,14 @@ public class PocketListClientTest implements FabricClientGameTest {
 		return "setblock " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " " + block;
 	}
 
-	private static void openAndClose(ClientGameTestContext ctx, BlockPos pos, Class<? extends AbstractContainerScreen<?>> screen) {
+	/** Right-clicks a block with whatever is in the main hand. */
+	private static void useBlock(ClientGameTestContext ctx, BlockPos pos) {
 		ctx.runOnClient(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
 				new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false)));
+	}
+
+	private static void openAndClose(ClientGameTestContext ctx, BlockPos pos, Class<? extends AbstractContainerScreen<?>> screen) {
+		useBlock(ctx, pos);
 		ctx.waitForScreen(screen);
 		ctx.waitTicks(3);
 		close(ctx);

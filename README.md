@@ -44,7 +44,7 @@ From the list screen's Settings button, or Mod Menu's Config button:
 - **HUD:** on or off.
 - **HUD Position:** which corner of the screen. It starts top-left, or bottom-right when a minimap mod (Xaero's Minimap, JourneyMap or VoxelMap) is installed, or top-right with Simple HUD Enhanced, whose text fills the top left. In the top-right corner the list sits below any effect icons.
 - **HUD Lines:** how many lines it shows (8 by default); the rest are summed up as "and 3 more".
-- **Count Nearby Chests:** on or off.
+- **Count Nearby Chests:** on or off. This covers the shelves and canisters you've used as well.
 
 Every key can be changed in Controls, under Pocket List. There's also a key to show or hide the HUD, which starts unbound.
 
@@ -53,6 +53,8 @@ Every key can be changed in Controls, under Pocket List. There's also a key to s
 Your inventory and off-hand count, and so do the shulker boxes and bundles you carry (and bundles inside those). Whatever is open in front of you counts too: a chest, a barrel, or the crafting grid.
 
 Pocket List also remembers what was in the chests, barrels, shulker boxes, hoppers, dispensers and droppers you've opened, as they were when you closed them. Anything within 32 blocks counts towards your list, so you can stand in your storage room and see what you still need. Ender chests are left out, since their contents are the same everywhere. This memory is kept for each world and each server, so it's still there next time you play.
+
+Some blocks hold things without opening a screen: shelves, and other mods' storage such as Espresso Flavoured's canisters and glass jars. Once you've used one, it counts too, and since those blocks show what they hold, the count stays up to date while you're nearby, even when a hopper does the filling. Mailboxes from Mighty Mail open like chests, so they're remembered like chests.
 
 ## Fair play on servers
 
@@ -64,7 +66,7 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 
 - Items are matched by type. A pinned potion counts any potion, and a pinned enchanted book counts any enchanted book.
 - On someone else's server without JEI or REI, Break down and recipe pinning only know the recipes you've unlocked. Adding items by name always works.
-- Chest memory goes by what was there when you last closed the chest. If a hopper or a friend moves things around, open it again to refresh it.
+- Chest memory goes by what was there when you last closed the chest. If a hopper or a friend moves things around, open it again to refresh it. (Shelves and canisters keep themselves up to date.)
 
 ## Requirements
 

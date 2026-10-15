@@ -41,7 +41,7 @@
 	"pocket_list.options.hudLines": "HUD Lines",
 	"pocket_list.options.hudLines.tooltip": "How many lines the HUD shows at most; the rest are summed up as \"and 3 more\".",
 	"pocket_list.options.countChests": "Count Nearby Chests",
-	"pocket_list.options.countChests.tooltip": "Count what was in the chests, barrels and shulker boxes you've opened within 32 blocks.",
+	"pocket_list.options.countChests.tooltip": "Count what was in the chests, barrels and shulker boxes you've opened within 32 blocks, and what's in the shelves and canisters you've used.",
 	"pocket_list.welcome.title": "Pocket List",
 	"pocket_list.welcome.text": "Press %s to start a list of things to gather.",
 	"pocket_list.finished.title": "All gathered!",
