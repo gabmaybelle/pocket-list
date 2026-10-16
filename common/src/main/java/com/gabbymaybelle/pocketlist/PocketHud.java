@@ -3,7 +3,6 @@ package com.gabbymaybelle.pocketlist;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -33,11 +32,10 @@ public final class PocketHud {
 	private PocketHud() {
 	}
 
-	static void register() {
-		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(PocketList.MOD_ID, "list"), PocketHud::extract);
-	}
+	/** The HUD element's id; each loader registers {@link #extract} under it. */
+	public static final Identifier ID = Identifier.fromNamespaceAndPath(PocketList.MOD_ID, "list");
 
-	private static void extract(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+	public static void extract(GuiGraphicsExtractor graphics, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		Lists.PocketListData list = Lists.active();
 		if (!Lists.data().hud || list.entries.isEmpty() || mc.player == null

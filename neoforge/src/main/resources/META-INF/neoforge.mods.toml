@@ -1,0 +1,44 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/gabmaybelle/pocket-list/issues"
+
+[[mods]]
+modId = "pocket_list"
+version = "${version}"
+displayName = "Pocket List"
+authors = "Gabby"
+displayURL = "https://github.com/gabmaybelle/pocket-list"
+logoFile = "assets/pocket_list/icon.png"
+description = '''A little checklist in the corner of your screen. Add items by name or pin them from your inventory, recipe book, JEI or REI; break things down into their ingredients; and watch the list tick itself off as you gather from your inventory, the boxes and bundles you carry, and the chests you've opened nearby.'''
+
+[[mixins]]
+config = "pocket_list.mixins.json"
+
+[[dependencies.pocket_list]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.2,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.pocket_list]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.2,26.4)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.pocket_list]]
+modId = "jei"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.pocket_list]]
+modId = "roughlyenoughitems"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "CLIENT"

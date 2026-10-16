@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 
@@ -19,7 +18,7 @@ import net.minecraft.util.Util;
  */
 public final class Lists {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("pocket_list.json");
+	private static final Path FILE = Platform.configDir().resolve("pocket_list.json");
 	/** How long a freshly added line stays highlighted on the HUD. */
 	private static final long FLASH_MILLIS = 1500;
 	/** No line asks for more than this. */
@@ -162,10 +161,10 @@ public final class Lists {
 			// A corner name this version doesn't know (or none at all).
 			data.hudPosition = HudPosition.TOP_LEFT;
 		}
-		if (firstRun && MINIMAP_MODS.stream().anyMatch(id -> FabricLoader.getInstance().isModLoaded(id))) {
+		if (firstRun && MINIMAP_MODS.stream().anyMatch(Platform::isModLoaded)) {
 			// Keep out of a minimap's corner; once saved, the player's own choice stands.
 			data.hudPosition = HudPosition.BOTTOM_RIGHT;
-		} else if (firstRun && TOP_LEFT_HUD_MODS.stream().anyMatch(id -> FabricLoader.getInstance().isModLoaded(id))) {
+		} else if (firstRun && TOP_LEFT_HUD_MODS.stream().anyMatch(Platform::isModLoaded)) {
 			// A HUD mod's text is in the top left: start top right, below any effect icons.
 			data.hudPosition = HudPosition.TOP_RIGHT;
 		}

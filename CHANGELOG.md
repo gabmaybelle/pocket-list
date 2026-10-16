@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Pocket List now comes as a NeoForge mod as well as a Fabric one, for Minecraft 26.2 and 26.3. It looks and works the same. On NeoForge, the settings are on the Mods screen's Config button.
+- On Minecraft 26.2, the default keys work again: K opens your list and Z pins. They were set to keys that don't exist there, so they had to be set by hand in Controls.
+
 ## 0.1.0
 
 The first release.

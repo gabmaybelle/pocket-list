@@ -1,0 +1,73 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+repositories {
+	maven { url = 'https://maven.terraformersmc.com/releases/' }
+}
+
+// The common sources are compiled straight into this jar (no common jar to bundle), so the
+// Fabric mod is one file.
+sourceSets.main {
+	java.srcDir project(':common').file('src/main/java')
+	resources.srcDir project(':common').file('src/main/resources')
+}
+
+loom {
+	mods {
+		"pocket_list" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	// Versions are in gradle.properties.
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Mod Menu: only for the Config button; not bundled or required.
+	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
+	compileOnly "maven.modrinth:jei:csqmrfNS"
+	compileOnly "maven.modrinth:rei:rKsAE6bX"
+	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
+	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+
+	// `./gradlew :fabric:runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
+	// On 26.2 (`-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`) JEI is 30.29.0.201
+	// (Modrinth id d3HeviSL); REI is only tested on 26.3.
+	if (project.findProperty("testViewer") == "jei") {
+		runtimeOnly project.minecraft_version == "26.2" ? "maven.modrinth:jei:d3HeviSL" : "maven.modrinth:jei:csqmrfNS"
+	} else if (project.findProperty("testViewer") == "rei") {
+		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
+		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"
+		runtimeOnly "maven.modrinth:architectury-api:1pMaB6So"
+	}
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+// Client game tests: `./gradlew :fabric:runClientGameTest` starts a real game, creates a test
+// world and drives it (keys, clicks, screenshots) from src/gametest. Nothing here ships in the jar.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "pocket_list_gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
+// pocket-list-fabric-<version>.jar, the name players download.
+tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
+tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }

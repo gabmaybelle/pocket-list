@@ -1,0 +1,46 @@
+plugins {
+	id 'net.neoforged.moddev' version "${moddev_version}"
+}
+
+// The common sources are compiled straight into this jar, the same as the Fabric side.
+sourceSets.main {
+	java.srcDir project(':common').file('src/main/java')
+	resources.srcDir project(':common').file('src/main/resources')
+}
+
+neoForge {
+	version = project.neoforge_version
+
+	mods {
+		"pocket_list" {
+			sourceSet sourceSets.main
+		}
+	}
+
+	runs {
+		client {
+			client()
+		}
+	}
+}
+
+dependencies {
+	// Recipe viewers: compiled against their APIs only; not bundled or required.
+	compileOnly "maven.modrinth:jei:csqmrfNS"
+	compileOnly "maven.modrinth:rei:rKsAE6bX"
+	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
+	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand "version": version
+	}
+}
+
+tasks.named('jar') { archiveBaseName = "${rootProject.name}-neoforge" }
+tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-neoforge" }

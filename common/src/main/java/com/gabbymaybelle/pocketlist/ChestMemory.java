@@ -13,23 +13,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemStorage;
-import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
-import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
-import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
@@ -38,6 +29,7 @@ import net.minecraft.world.inventory.HopperMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.EnderChestBlock;
@@ -54,7 +46,7 @@ import net.minecraft.world.level.storage.LevelResource;
  * <p>Blocks that hold things without opening a screen (shelves, and other mods'
  * storage such as Espresso Flavoured's canisters and jars) are remembered once you've used them.
  * Those blocks tell every player's game what they hold, since they show it or can be checked at
- * a glance, so they're read through Fabric's item storage and kept up to date while you're near.
+ * a glance, so they're read through the loader's item storage and kept up to date while you're near.
  */
 public final class ChestMemory {
 	/** Chests further away than this (in blocks) don't count. */
@@ -64,7 +56,7 @@ public final class ChestMemory {
 	/** A block that opened no screen is read this long (in ticks) after you used it, once the game has heard back about it. */
 	static final int STORAGE_WAIT = 10;
 	private static final Gson GSON = new GsonBuilder().create();
-	private static final Path FOLDER = FabricLoader.getInstance().getConfigDir().resolve("pocket_list").resolve("chests");
+	private static final Path FOLDER = Platform.configDir().resolve("pocket_list").resolve("chests");
 
 	/** One remembered container: where it is, and how many of each item it held. */
 	static final class Place {
@@ -98,69 +90,93 @@ public final class ChestMemory {
 	private ChestMemory() {
 	}
 
-	static void register() {
-		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
-			if (level.isClientSide()) {
-				lastUsed = hit.getBlockPos().immutable();
-				usedBlock = lastUsed;
-				lastUsedTick = level.getGameTime();
+	/** The container screen whose contents are kept when it closes, and where that container is. */
+	private static AbstractContainerScreen<?> watched;
+	private static Place watchedPlace;
+
+	/** The player used a block (each loader calls this from its use-block event, on the player's side only). */
+	public static void onUseBlock(Level level, BlockPos pos) {
+		if (level.isClientSide()) {
+			lastUsed = pos.immutable();
+			usedBlock = lastUsed;
+			lastUsedTick = level.getGameTime();
+		}
+	}
+
+	/** A screen has just been set up: if it's the container you just used, it's remembered when it closes. */
+	public static void onScreenInit(Minecraft mc, Screen screen) {
+		if (!(screen instanceof AbstractContainerScreen<?> containerScreen) || mc.level == null || lastUsed == null
+				|| mc.level.getGameTime() - lastUsedTick > OPEN_WINDOW) {
+			return;
+		}
+		// The block opened a screen, so it's seen through that (or, for a furnace, not at all).
+		usedBlock = null;
+		if (!remembers(containerScreen.getMenu())) {
+			return;
+		}
+		if (mc.level.getBlockState(lastUsed).getBlock() instanceof EnderChestBlock) {
+			// Its contents are yours wherever you open it; they'd count once per ender chest.
+			return;
+		}
+		BlockPos pos = canonical(mc.level, lastUsed);
+		String dimension = mc.level.dimension().identifier().toString();
+		lastUsed = null;
+		Place place = new Place();
+		place.dimension = dimension;
+		place.x = pos.getX();
+		place.y = pos.getY();
+		place.z = pos.getZ();
+		open = place.key();
+		watched = containerScreen;
+		watchedPlace = place;
+	}
+
+	/** A screen is closing (or being replaced): the watched container's contents are kept as they are now. */
+	public static void onScreenRemoved(Screen screen) {
+		if (screen != watched || watchedPlace == null) {
+			return;
+		}
+		Place place = watchedPlace;
+		Map<Item, Integer> totals = new HashMap<>();
+		for (Slot slot : watched.getMenu().slots) {
+			if (!(slot.container instanceof Inventory)) {
+				Counter.add(slot.getItem(), totals, 0);
 			}
-			return InteractionResult.PASS;
-		});
-		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
-			if (!(screen instanceof AbstractContainerScreen<?> containerScreen) || mc.level == null || lastUsed == null
-					|| mc.level.getGameTime() - lastUsedTick > OPEN_WINDOW) {
-				return;
-			}
-			// The block opened a screen, so it's seen through that (or, for a furnace, not at all).
-			usedBlock = null;
-			if (!remembers(containerScreen.getMenu())) {
-				return;
-			}
-			if (mc.level.getBlockState(lastUsed).getBlock() instanceof EnderChestBlock) {
-				// Its contents are yours wherever you open it; they'd count once per ender chest.
-				return;
-			}
-			BlockPos pos = canonical(mc.level, lastUsed);
-			String dimension = mc.level.dimension().identifier().toString();
-			lastUsed = null;
-			Place place = new Place();
-			place.dimension = dimension;
-			place.x = pos.getX();
-			place.y = pos.getY();
-			place.z = pos.getZ();
-			open = place.key();
-			ScreenEvents.remove(screen).register(closed -> {
-				Map<Item, Integer> totals = new HashMap<>();
-				for (Slot slot : containerScreen.getMenu().slots) {
-					if (!(slot.container instanceof Inventory)) {
-						Counter.add(slot.getItem(), totals, 0);
-					}
-				}
-				totals.forEach((item, count) -> place.items.put(BuiltInRegistries.ITEM.getKey(item).toString(), count));
-				REMEMBERED.put(place.key(), place);
-				if (place.key().equals(open)) {
-					open = null;
-				}
-				save();
-			});
-		});
-		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-			if (usedBlock != null && mc.level != null && mc.level.getGameTime() - lastUsedTick >= STORAGE_WAIT) {
-				BlockPos pos = usedBlock;
-				usedBlock = null;
-				rememberStorage(mc, pos);
-			}
-		});
-		ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> mc.execute(() -> load(mc)));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> {
-			save();
-			REMEMBERED.clear();
-			file = null;
-			lastUsed = null;
-			usedBlock = null;
+		}
+		watched = null;
+		watchedPlace = null;
+		totals.forEach((item, count) -> place.items.put(BuiltInRegistries.ITEM.getKey(item).toString(), count));
+		REMEMBERED.put(place.key(), place);
+		if (place.key().equals(open)) {
 			open = null;
-		});
+		}
+		save();
+	}
+
+	/** Every client tick: a used block that opened no screen is read once the game has heard back about it. */
+	public static void onTick(Minecraft mc) {
+		if (usedBlock != null && mc.level != null && mc.level.getGameTime() - lastUsedTick >= STORAGE_WAIT) {
+			BlockPos pos = usedBlock;
+			usedBlock = null;
+			rememberStorage(mc, pos);
+		}
+	}
+
+	/** Joined a world or server: load what was remembered there. */
+	public static void onJoin(Minecraft mc) {
+		mc.execute(() -> load(mc));
+	}
+
+	/** Left a world or server. */
+	public static void onDisconnect() {
+		save();
+		REMEMBERED.clear();
+		file = null;
+		lastUsed = null;
+		usedBlock = null;
+		open = null;
+		watched = null;
+		watchedPlace = null;
 	}
 
 	/** Chests, barrels, shulker boxes, hoppers, dispensers and droppers; not furnaces or crafting tables. */
@@ -194,25 +210,25 @@ public final class ChestMemory {
 	}
 
 	/**
-	 * What a block holds, as this game sees it, through Fabric's item storage: null when the
+	 * What a block holds, as this game sees it, through the loader's item storage: null when the
 	 * block has no storage at all. Chests and the like show as empty from here until opened, since
 	 * the server only tells you what's inside once you do.
 	 */
 	private static Map<String, Integer> contents(Level level, BlockPos pos) {
-		Storage<ItemVariant> storage;
+		List<ItemStack> stacks;
 		try {
-			storage = ItemStorage.SIDED.find(level, pos, null);
+			stacks = Platform.blockItems(level, pos);
 		} catch (RuntimeException e) {
 			// A mod's storage that doesn't expect to be asked from the player's side of the game.
 			return null;
 		}
-		if (storage == null) {
+		if (stacks == null) {
 			return null;
 		}
 		Map<Item, Integer> totals = new HashMap<>();
-		for (StorageView<ItemVariant> view : storage) {
-			if (!view.isResourceBlank() && view.getAmount() > 0) {
-				Counter.add(view.getResource().toStack((int) Math.min(view.getAmount(), Integer.MAX_VALUE)), totals, 0);
+		for (ItemStack stack : stacks) {
+			if (!stack.isEmpty()) {
+				Counter.add(stack, totals, 0);
 			}
 		}
 		Map<String, Integer> out = new HashMap<>();
