@@ -1,93 +1,41 @@
-plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-}
+// Shared settings for the three subprojects. Each subproject's own build.gradle says how it
+// compiles; versions live in gradle.properties.
+subprojects {
+	apply plugin: 'java'
 
-repositories {
-	maven { url = 'https://maven.terraformersmc.com/releases/' }
-	maven { url = 'https://maven.shedaniel.me/' }
-	exclusiveContent {
-		forRepository {
-			maven { url = 'https://api.modrinth.com/maven' }
-		}
-		filter {
-			includeGroup 'maven.modrinth'
-		}
-	}
-}
+	group = rootProject.group
+	version = rootProject.version
 
-loom {
-	mods {
-		"pocket_list" {
-			sourceSet sourceSets.main
+	repositories {
+		mavenCentral()
+		// Recipe viewers (compile only; not bundled or required).
+		maven { url = 'https://maven.shedaniel.me/' }
+		exclusiveContent {
+			forRepository {
+				maven { url = 'https://api.modrinth.com/maven' }
+			}
+			filter {
+				includeGroup 'maven.modrinth'
+			}
 		}
 	}
-}
 
-dependencies {
-	// Versions are in gradle.properties.
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	// Mod Menu: only for the Config button; not bundled or required.
-	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
-	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	// (Modrinth version ids: JEI 31.12.0.65, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
-	compileOnly "maven.modrinth:jei:csqmrfNS"
-	compileOnly "maven.modrinth:rei:rKsAE6bX"
-	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
-	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
-	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
-
-	// `./gradlew runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
-	// On 26.2 (`-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`) JEI is 30.29.0.201
-	// (Modrinth id d3HeviSL); REI is only tested on 26.3.
-	if (project.findProperty("testViewer") == "jei") {
-		runtimeOnly project.minecraft_version == "26.2" ? "maven.modrinth:jei:d3HeviSL" : "maven.modrinth:jei:csqmrfNS"
-	} else if (project.findProperty("testViewer") == "rei") {
-		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
-		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"
-		runtimeOnly "maven.modrinth:architectury-api:1pMaB6So"
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = 25
+		it.options.encoding = 'UTF-8'
 	}
-}
 
-processResources {
-	def version = project.version
-	inputs.property "version", version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version
+	java {
+		withSourcesJar()
+		sourceCompatibility = JavaVersion.VERSION_25
+		targetCompatibility = JavaVersion.VERSION_25
 	}
-}
 
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
-}
-
-java {
-	// Also builds a -sources jar alongside the mod.
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
-}
-
-// Client game tests: `./gradlew runClientGameTest` starts a real game, creates a test
-// world and drives it (keys, clicks, screenshots) from src/gametest. Nothing here ships in the jar.
-fabricApi {
-	configureTests {
-		createSourceSet = true
-		modId = "pocket_list_gametest"
-		enableGameTests = false
-		enableClientGameTests = true
-		eula = true
+	// Captured outside the closure: the configuration cache can't serialise `rootProject` itself.
+	def licenseSuffix = "_" + rootProject.name
+	jar {
+		from(rootProject.file('LICENSE')) {
+			rename { it + licenseSuffix }
+		}
 	}
 }

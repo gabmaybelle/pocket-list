@@ -1,6 +1,6 @@
 # Pocket List
 
-A client-side Fabric mod for Minecraft 26.2 and 26.3, one jar for both (mod ID `pocket_list`): a checklist of what you're
+A client-side Fabric and NeoForge mod for Minecraft 26.2 and 26.3, one jar per loader for both (mod ID `pocket_list`): a checklist of what you're
 gathering, in a corner of the screen, that counts as you collect. See README.md for what
 players get.
 
@@ -9,18 +9,25 @@ it first, and add this session's row before ending.
 
 ## Layout
 
-- `src/main/java/com/gabbymaybelle/pocketlist/`: `Lists.java` (the lists and saving them),
+- `common/src/main/java/com/gabbymaybelle/pocketlist/`: `Lists.java` (the lists and saving them),
   the list and settings screens, counting (inventory, open containers, remembered chests),
-  recipe lookup, and the JEI and REI hooks (optional, compile-only).
-- `src/gametest/`: the client game test (`PocketListClientTest`) and `ScreenshotTour`.
+  recipe lookup, and the JEI and REI hooks (optional, compile-only). `Platform` is what the
+  loader answers (config folder, installed mods, a block's item storage); `PocketList` and
+  `ChestMemory` have plain handlers each loader's events call.
+- `fabric/`: `PocketListFabric` (Fabric API events, item storage through `ItemStorage.SIDED`),
+  `ModMenuIntegration`, `fabric.mod.json`, and `src/gametest/` (the client game test,
+  `PocketListClientTest`, and `ScreenshotTour`).
+- `neoforge/`: `PocketListNeoForge` (NeoForge events, item storage through
+  `Capabilities.Item.BLOCK`, the Mods screen's Config button) and `neoforge.mods.toml`. JEI finds
+  `JeiPlugin` by its `@JeiPlugin` annotation there; on Fabric through the `jei_mod_plugin` entrypoint.
 
 ## Build and test
 
-- `./gradlew build`: jar in `build/libs/`.
-- `./gradlew runClientGameTest`: counting, chest memory, pinning, typed amounts, Break down, the
+- `./gradlew build`: jars in `fabric/build/libs/` and `neoforge/build/libs/`.
+- `./gradlew :fabric:runClientGameTest` (Fabric only): counting, chest memory, pinning, typed amounts, Break down, the
   list and settings screens and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it
   again with that recipe viewer installed. Add `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`
-  for 26.2 (JEI 30.29 there; REI only on 26.3).
+  for 26.2 (JEI 30.29 there; REI only on 26.3); add `-Pneoforge_version=26.2.0.93` too so the NeoForge project configures for 26.2.
 
 ## Gotchas
 
@@ -28,7 +35,7 @@ it first, and add this session's row before ending.
   the player has seen: no scanning unopened chests, no finding blocks through walls. Keep it so.
   Blocks that hold things without a screen (shelves, Espresso Flavoured's
   canisters and jars, anything with Fabric item storage whose contents the server sends to every
-  game) are read through `ItemStorage.SIDED` in `ChestMemory`, but only after the player has used
+  game) are read through the loader's item storage (`ItemStorage.SIDED` on Fabric, `Capabilities.Item.BLOCK` on NeoForge) from `ChestMemory`, but only after the player has used
   that block, and they're kept live while the player is within 32 blocks. A chest read that way
   shows empty on the player's side, so chests stay on the screen path.
 - Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes, which

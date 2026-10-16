@@ -1,0 +1,27 @@
+// Loader-neutral code. This project is compiled on its own so a Fabric or NeoForge import can't
+// sneak in: only Minecraft, Mixin, the recipe viewers' APIs and the JDK are on the classpath.
+// Nothing here ships as a jar; `fabric` and `neoforge` compile these sources into theirs.
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	// Only for the Mixin annotations and the launch-side classes they need. No Fabric API here.
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
+	// (Modrinth version ids: JEI 31.12.0.65, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
+	compileOnly "maven.modrinth:jei:csqmrfNS"
+	compileOnly "maven.modrinth:rei:rKsAE6bX"
+	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
+	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+}
+
+loom {
+	mods {
+		"pocket_list" {
+			sourceSet sourceSets.main
+		}
+	}
+}

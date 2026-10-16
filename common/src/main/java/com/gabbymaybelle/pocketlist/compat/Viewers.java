@@ -1,9 +1,9 @@
 package com.gabbymaybelle.pocketlist.compat;
 
+import com.gabbymaybelle.pocketlist.Platform;
 import com.gabbymaybelle.pocketlist.PocketList;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * The recipe viewers that are installed. Each one's code is only loaded when that mod is
@@ -16,12 +16,11 @@ public final class Viewers {
 	}
 
 	public static void init() {
-		FabricLoader loader = FabricLoader.getInstance();
 		try {
-			if (loader.isModLoaded("jei")) {
+			if (Platform.isModLoaded("jei")) {
 				ALL.add(new JeiViewer());
 			}
-			if (loader.isModLoaded("roughlyenoughitems")) {
+			if (Platform.isModLoaded("roughlyenoughitems")) {
 				ALL.add(new ReiViewer());
 			}
 		} catch (LinkageError e) {

@@ -17,10 +17,10 @@
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-			"com.gabbymaybelle.pocketlist.PocketList"
+			"com.gabbymaybelle.pocketlist.fabric.PocketListFabric"
 		],
 		"modmenu": [
-			"com.gabbymaybelle.pocketlist.ModMenuIntegration"
+			"com.gabbymaybelle.pocketlist.fabric.ModMenuIntegration"
 		],
 		"jei_mod_plugin": [
 			"com.gabbymaybelle.pocketlist.compat.JeiPlugin"

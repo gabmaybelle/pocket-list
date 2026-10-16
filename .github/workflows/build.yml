@@ -25,9 +25,9 @@ jobs:
           - variant: 'with REI'
             test_args: '-PtestViewer=rei'
           - variant: 'Minecraft 26.2'
-            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2'
+            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2 -Pneoforge_version=26.2.0.93'
           - variant: 'Minecraft 26.2 with JEI'
-            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2 -PtestViewer=jei'
+            test_args: '-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2 -Pneoforge_version=26.2.0.93 -PtestViewer=jei'
     name: build (${{ matrix.variant }})
     steps:
       - name: checkout repository
@@ -51,8 +51,8 @@ jobs:
         # itself against 26.2's game code (fetched by compiling for 26.2).
         if: matrix.variant == 'on its own'
         run: |
-          cp build/libs/pocket-list-*[0-9].jar /tmp/pocket-list.jar
-          ./gradlew compileJava -Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2
+          cp fabric/build/libs/pocket-list-fabric-*[0-9].jar /tmp/pocket-list.jar
+          ./gradlew :fabric:compileJava -Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2 -Pneoforge_version=26.2.0.93
           node tools/check-linkage.js /tmp/pocket-list.jar "$(find ~/.gradle/caches/fabric-loom -name 'minecraft-merged-deobf-26.2.jar' | head -1)"
       - name: install EGL
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libegl1 libegl-mesa0
@@ -62,17 +62,19 @@ jobs:
         env:
           SDL_VIDEO_FORCE_EGL: '1'
         timeout-minutes: 15
-        run: xvfb-run -a ./gradlew runClientGameTest ${{ matrix.test_args }}
+        run: xvfb-run -a ./gradlew :fabric:runClientGameTest ${{ matrix.test_args }}
       - name: capture game test screenshots
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: Game test screenshots (${{ matrix.variant }})
-          path: build/run/clientGameTest/screenshots/
+          path: fabric/build/run/clientGameTest/screenshots/
           if-no-files-found: ignore
       - name: capture build artifacts
         if: matrix.variant == 'on its own'
         uses: actions/upload-artifact@v7
         with:
           name: Artifacts
-          path: build/libs/
+          path: |
+            fabric/build/libs/
+            neoforge/build/libs/

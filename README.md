@@ -70,15 +70,15 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 
 ## Requirements
 
-- Minecraft 26.2 or 26.3 (one jar works on both)
-- Fabric Loader 0.19.5 or newer
-- [Fabric API](https://modrinth.com/mod/fabric-api)
+- Minecraft 26.2 or 26.3 (one file per loader works on both)
+- Fabric: Fabric Loader 0.19.5 or newer and [Fabric API](https://modrinth.com/mod/fabric-api). Optional: [Mod Menu](https://modrinth.com/mod/modmenu), whose Config button opens the settings.
+- NeoForge: NeoForge 26.2 or newer. The settings are on the Mods screen's Config button.
 
-Optional: [Mod Menu](https://modrinth.com/mod/modmenu) (its Config button opens the settings), [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei).
+Optional on both: [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei). Pick the `fabric` or `neoforge` file for your loader.
 
 ## For developers
 
-`./gradlew runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list screen and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it again with that recipe viewer installed, and `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2` to run it on 26.2 (JEI only there). `node tools/check-linkage.js <jar> <26.2 game jar>` checks the jar, which is built against 26.3, only calls game code 26.2 has too. Screenshots land in `build/run/clientGameTest/screenshots`.
+`./gradlew :fabric:runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list screen and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it again with that recipe viewer installed, and `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2` to run it on 26.2 (JEI only there). `node tools/check-linkage.js <jar> <26.2 game jar>` checks the jar, which is built against 26.3, only calls game code 26.2 has too. Screenshots land in `fabric/build/run/clientGameTest/screenshots`. The jars are `fabric/build/libs/pocket-list-fabric-<version>.jar` and `neoforge/build/libs/pocket-list-neoforge-<version>.jar`; there is no automated game test for the NeoForge jar yet.
 
 ## Licence
 

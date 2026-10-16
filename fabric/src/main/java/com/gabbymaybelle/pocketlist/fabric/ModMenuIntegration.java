@@ -1,5 +1,6 @@
-package com.gabbymaybelle.pocketlist;
+package com.gabbymaybelle.pocketlist.fabric;
 
+import com.gabbymaybelle.pocketlist.PocketListSettingsScreen;
 import com.terraformersmc.modmenu.api.ConfigScreenFactory;
 import com.terraformersmc.modmenu.api.ModMenuApi;
 
