@@ -64,9 +64,10 @@ jobs:
         timeout-minutes: 15
         run: xvfb-run -a ./gradlew :fabric:runClientGameTest ${{ matrix.test_args }}
       - name: run NeoForge game test
-        # The NeoForge jar's checks (neoforge/src/clienttest). A failed check crashes the game, which
-        # fails this step; the crash report is uploaded with the screenshots.
-        if: always() && (matrix.variant == 'on its own' || matrix.variant == 'Minecraft 26.2')
+        # The NeoForge jar's checks (neoforge/src/clienttest), in every variant: with JEI or REI it
+        # also pins from the viewer's list. A failed check crashes the game, which fails this step;
+        # the crash report is uploaded with the screenshots.
+        if: always()
         env:
           SDL_VIDEO_FORCE_EGL: '1'
         timeout-minutes: 12
