@@ -99,8 +99,13 @@ final class ClientTest {
 		}
 	}
 
-	/** Creates a fresh flat creative world with commands on, and waits until the player is in it. */
-	static void createWorld(String name) {
+	/**
+	 * Creates a fresh flat creative world with commands on, and waits until the player is in it. The
+	 * folder gets the time in its name, so a run never reopens a world an earlier run left behind
+	 * (in the same game folder, perhaps on another Minecraft version).
+	 */
+	static void createWorld(String baseName) {
+		String name = baseName + "-" + System.currentTimeMillis();
 		waitUntil("the title screen", 2400, mc -> mc.gui.overlay() == null && mc.gui.screen() != null);
 		run(mc -> mc.createWorldOpenFlows().createFreshLevel(name,
 				new LevelSettings(name, GameType.CREATIVE, new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true,
