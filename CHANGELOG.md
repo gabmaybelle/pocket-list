@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - **Paste List** makes a new list from text you've copied: one item per line with how many, such as "64 oak planks", "Torches x16" or "minecraft:glass_pane 8". Lines it can't match to an item are named in a message, never guessed.
 - **Copy List** copies the list as text, one line per item, to keep in your notes or paste into a friend's Pocket List.
