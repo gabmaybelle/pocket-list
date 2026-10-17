@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Paste List** makes a new list from text you've copied: one item per line with how many, such as "64 oak planks", "Torches x16" or "minecraft:glass_pane 8". Lines it can't match to an item are named in a message, never guessed.
+- **Copy List** copies the list as text, one line per item, to keep in your notes or paste into a friend's Pocket List.
+- **From Litematica** makes a new list from Litematica's newest material list (its Write to file button, as a table or a .csv), named after the schematic, with each item's total. The button shows when Litematica is installed.
+
 ## 0.2.1+1.21.1
 
 - A brand-new player's first list is called "List 1", not `pocket_list.default_name`. A list already saved with that name gets its proper name the next time you use it.

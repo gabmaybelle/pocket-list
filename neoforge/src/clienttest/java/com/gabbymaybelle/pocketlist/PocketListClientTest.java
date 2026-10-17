@@ -352,10 +352,48 @@ final class PocketListClientTest {
 		run(mc -> mc.setScreen(new PocketListScreen(null)));
 		waitUntil("the list screen", 40, mc -> mc.screen instanceof PocketListScreen);
 		screenshot();
+		listsAsText();
 		run(mc -> mc.setScreen(new PocketListSettingsScreen(mc.screen)));
 		waitUntil("the settings screen", 40, mc -> mc.screen instanceof PocketListSettingsScreen);
 		run(mc -> mc.setScreen(null));
 		waitTicks(5);
+	}
+
+	/** Litematica's material list as its Write to file button writes it (the Fabric test has the .csv too). */
+	private static final String LITEMATICA_TABLE = """
+			+--------------------------------------------------------------------------+
+			| Cottage roof                                                             |
+			+--------------------------------------------------------------------------+
+			| Item          | Total | Missing | Available | Total (sb) | Missing (sb) |
+			+---------------+-------+---------+-----------+------------+--------------+
+			| Oak Planks    |   320 |     300 |        20 |    0.19 SB |      0.17 SB |
+			| Glass Pane    |    48 |      48 |         0 |    0.03 SB |      0.03 SB |
+			| Mystery Block |     5 |       5 |         0 |    0.00 SB |      0.00 SB |
+			+---------------+-------+---------+-----------+------------+--------------+
+			""";
+
+	/** Paste List from the clipboard (here a Litematica table), and Copy List's text pasting back as the same list. */
+	private static void listsAsText() {
+		run(mc -> {
+			int lists = Lists.data().lists.size();
+			mc.keyboardHandler.setClipboard(LITEMATICA_TABLE);
+			((PocketListScreen) mc.screen).pasteList(mc.keyboardHandler.getClipboard(), null);
+			check(Lists.data().lists.size() == lists + 1, "Paste List didn't make a new list");
+			check(Lists.active().name.equals("Cottage roof"), "A pasted Litematica list isn't named after its schematic: " + Lists.active().name);
+			check(needs().equals(Map.of("minecraft:oak_planks", 320, "minecraft:glass_pane", 48)),
+					"A pasted Litematica list doesn't have each item's Total: " + needs());
+			Map<String, Integer> pasted = needs();
+			ListText.Result copied = ListText.read(ListText.write(Lists.active()), mc.level.enabledFeatures());
+			Map<String, Integer> back = new HashMap<>();
+			copied.entries().forEach(e -> back.put(e.key(), e.need));
+			check(back.equals(pasted) && copied.unknown().isEmpty(), "Copy List's text doesn't paste back as the same list: " + back + " " + copied.unknown());
+		});
+		screenshot();
+		run(mc -> {
+			Lists.data().lists.removeLast();
+			Lists.data().active = 0;
+			Lists.save();
+		});
 	}
 
 	/** Places a block this far east and south of where the player started, on the singleplayer server. */
