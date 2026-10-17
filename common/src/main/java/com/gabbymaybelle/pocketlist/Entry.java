@@ -52,7 +52,7 @@ public final class Entry {
 
 	public static Entry ofItems(List<Item> items, int need) {
 		if (items.size() == 1) {
-			return ofItem(items.getFirst(), need);
+			return ofItem(items.get(0), need);
 		}
 		Entry entry = new Entry();
 		for (Item item : items) {
@@ -101,7 +101,7 @@ public final class Entry {
 	/** The item to look up recipes for: the line's own item, or the first that fits. */
 	public Item mainItem() {
 		List<Item> options = options();
-		return options.isEmpty() ? null : options.getFirst();
+		return options.isEmpty() ? null : options.get(0);
 	}
 
 	/** What to show: the item, or for tags and choices, each option in turn, a second apiece. */
@@ -121,16 +121,16 @@ public final class Entry {
 		}
 		List<Item> options = options();
 		if (options.isEmpty()) {
-			return Component.literal(items.isEmpty() ? "?" : items.getFirst());
+			return Component.literal(items.isEmpty() ? "?" : items.get(0));
 		}
-		Component first = new ItemStack(options.getFirst()).getHoverName();
+		Component first = new ItemStack(options.get(0)).getHoverName();
 		return options.size() == 1 ? first : Component.translatable("pocket_list.or_similar", first);
 	}
 
 	/** The largest stack of this entry's first item, for shift-click amounts. */
 	public int stackSize() {
 		List<Item> options = options();
-		return options.isEmpty() ? 64 : new ItemStack(options.getFirst()).getMaxStackSize();
+		return options.isEmpty() ? 64 : new ItemStack(options.get(0)).getMaxStackSize();
 	}
 
 	List<Item> options() {

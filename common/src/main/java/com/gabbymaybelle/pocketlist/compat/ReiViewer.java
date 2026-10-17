@@ -19,6 +19,7 @@ import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.entry.EntryStack;
 import me.shedaniel.rei.api.common.entry.type.VanillaEntryTypes;
 import me.shedaniel.rei.api.common.util.EntryStacks;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
@@ -52,8 +53,9 @@ final class ReiViewer implements RecipeViewer {
 
 	@Override
 	public boolean typing() {
+		// REI 12's search field is a game widget underneath; its focus is the game's.
 		TextField search = REIRuntime.getInstance().getSearchTextField();
-		return search != null && search.isFocused();
+		return search instanceof GuiEventListener widget && widget.isFocused();
 	}
 
 	@Override
@@ -69,7 +71,7 @@ final class ReiViewer implements RecipeViewer {
 			for (EntryIngredient ingredient : display.getInputEntries()) {
 				List<ItemStack> stacks = items(List.of(ingredient));
 				if (!stacks.isEmpty()) {
-					ingredients.add(Entry.ofItems(stacks.stream().map(ItemStack::getItem).distinct().toList(), stacks.getFirst().getCount()));
+					ingredients.add(Entry.ofItems(stacks.stream().map(ItemStack::getItem).distinct().toList(), stacks.get(0).getCount()));
 				}
 			}
 			if (!ingredients.isEmpty()) {

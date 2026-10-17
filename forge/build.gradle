@@ -1,0 +1,117 @@
+plugins {
+	id 'net.neoforged.moddev.legacyforge' version "${moddev_version}"
+}
+
+repositories {
+	maven { url = 'https://maven.minecraftforge.net' }
+}
+
+// The common sources are compiled straight into this jar, the same as the Fabric side.
+sourceSets.main {
+	java.srcDir project(':common').file('src/main/java')
+	resources.srcDir project(':common').file('src/main/resources')
+}
+// The in-game test (src/clienttest): part of the mod only in dev runs, never in the jar.
+sourceSets {
+	clienttest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+}
+
+legacyForge {
+	version = "${project.minecraft_version}-${project.forge_version}"
+	addModdingDependenciesTo sourceSets.clienttest
+
+	mods {
+		"pocket_list" {
+			sourceSet sourceSets.main
+			// The same mod as the main sources, so the test can reach the package's own classes.
+			sourceSet sourceSets.clienttest
+		}
+	}
+
+	runs {
+		client {
+			client()
+		}
+		// `./gradlew :forge:runClientTest`: starts the game, makes a flat world, runs the checks in
+		// src/clienttest and closes. A failed check crashes the game, so the task fails. Needs a display.
+		clientTest {
+			client()
+			systemProperty 'pocket_list.clienttest', 'true'
+			gameDirectory = project.file('build/run/clientTest')
+		}
+	}
+}
+
+// Every test run starts as a new player would: no saved lists (the welcome note shows), no
+// remembered chests. The run folder is kept between runs otherwise.
+def clientTestConfig = file('build/run/clientTest/config')
+tasks.matching { it.name == 'runClientTest' }.configureEach {
+	doFirst {
+		delete new File(clientTestConfig, 'pocket_list.json'), new File(clientTestConfig, 'pocket_list.json.broken'), new File(clientTestConfig, 'pocket_list')
+	}
+}
+
+dependencies {
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+	clienttestAnnotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+	// Recipe viewers: compiled against their Forge builds; not bundled or required.
+	// (Modrinth version ids: JEI 15.56.0.205, REI 12.1.785, Cloth Config 11.1.136, Architectury 9.2.14.)
+	modCompileOnly "maven.modrinth:jei:9jqubC9n"
+	modCompileOnly "maven.modrinth:rei:IoS2AjPk"
+	modCompileOnly "maven.modrinth:cloth-config:t8TXrZvZ"
+	modCompileOnly "maven.modrinth:architectury-api:1MKTLiiG"
+	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
+
+	// `./gradlew :forge:runClientTest -PtestViewer=jei` (or rei) runs the in-game test with that
+	// viewer's Forge build installed.
+	if (project.findProperty("testViewer") == "jei") {
+		modRuntimeOnly "maven.modrinth:jei:9jqubC9n"
+	} else if (project.findProperty("testViewer") == "rei") {
+		modRuntimeOnly "maven.modrinth:rei:IoS2AjPk"
+		modRuntimeOnly "maven.modrinth:cloth-config:t8TXrZvZ"
+		modRuntimeOnly "maven.modrinth:architectury-api:1MKTLiiG"
+	}
+}
+
+mixin {
+	add sourceSets.main, 'pocket_list.refmap.json'
+	config 'pocket_list.mixins.json'
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("META-INF/mods.toml") {
+		expand "version": version
+	}
+	// Forge reads the mixin refmap by name from the config; Fabric's Loom adds its own, so only
+	// this jar's copy of the shared mixin config names one.
+	filesMatching("pocket_list.mixins.json") {
+		filter { it.replace('"required": true,', '"required": true,\n\t"refmap": "pocket_list.refmap.json",') }
+	}
+}
+
+// Forge's tools run on Java 17, which Gradle must be able to find (see CLAUDE.md); the code itself is
+// compiled by the newer JDK for Java 17 (release 17 in the root build.gradle).
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+jar {
+	manifest.attributes(["MixinConfigs": "pocket_list.mixins.json"])
+}
+
+// pocket-list-forge-<version>.jar, the name players download.
+tasks.named('jar') { archiveBaseName = "${rootProject.name}-forge" }
+tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-forge" }
+
+// The game runs (dev client, game tests) use Java 17, as players' 1.20.1 does: the Mixin of 1.20.1's
+// loaders can't read the classes of a newer Java.
+tasks.withType(JavaExec).configureEach {
+	javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}

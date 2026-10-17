@@ -15,7 +15,7 @@ pluginManagement {
 
 rootProject.name = 'pocket-list'
 
-// `common` holds everything that doesn't care which loader it runs on. `fabric` and `neoforge`
+// `common` holds everything that doesn't care which loader it runs on. `fabric` and `forge`
 // compile those sources straight into their own jars (see their build.gradle), so there is one
 // codebase and two mod files.
-include 'common', 'fabric', 'neoforge'
+include 'common', 'fabric', 'forge'

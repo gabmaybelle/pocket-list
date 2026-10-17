@@ -4,7 +4,7 @@ A little checklist in the corner of your screen for the things you're gathering.
 
 I kept losing track halfway through a build. I'd head out for logs, come back with logs, and realise I'd forgotten the glass. Pocket List keeps the list for you and ticks things off as you collect them.
 
-This is the version for **Minecraft 1.21.1**, on Fabric and NeoForge. It does everything the newer versions do; the few small differences are under [On 1.21.1](#on-1211).
+This is the version for **Minecraft 1.20.1**, on Fabric and Forge. It does everything the newer versions do; the few small differences are under [On 1.20.1](#on-1201).
 
 ## Getting started
 
@@ -20,7 +20,7 @@ Each line in the list screen has a crafting table button. Click it, and the line
 
 Pocket List finds recipes in the best place it can:
 
-- on 1.21.1, every world and server tells your game all of its recipes when you join, so Pocket List knows every recipe, unlocked or not, in single player and on servers alike;
+- on 1.20.1, every world and server tells your game all of its recipes when you join, so Pocket List knows every recipe, unlocked or not, in single player and on servers alike;
 - with JEI or REI installed, it can also use theirs (for a machine from another mod, say);
 - and failing that, the recipes in your recipe book.
 
@@ -41,7 +41,7 @@ Press **K** to open your lists. From there you can:
 
 ## Settings
 
-From the list screen's Settings button, or Mod Menu's Config button:
+From the list screen's Settings button, Mod Menu's Config button on Fabric, or the Mods screen's Config button on Forge:
 
 - **HUD:** on or off.
 - **HUD Position:** which corner of the screen. It starts top-left, or bottom-right when a minimap mod (Xaero's Minimap, JourneyMap or VoxelMap) is installed, or top-right with Simple HUD Enhanced, whose text fills the top left. In the top-right corner the list sits below any effect icons.
@@ -52,7 +52,7 @@ Every key can be changed in Controls, under Pocket List. There's also a key to s
 
 ## What counts
 
-Your inventory and off-hand count, and so do the shulker boxes and bundles you carry (and bundles inside those; on 1.21.1 bundles are an experiment you turn on when making a world). Whatever is open in front of you counts too: a chest, a barrel, or the crafting grid.
+Your inventory and off-hand count, and so do the shulker boxes and bundles you carry (and bundles inside those; on 1.20.1 bundles are an experiment you turn on when making a world). Whatever is open in front of you counts too: a chest, a barrel, or the crafting grid.
 
 Pocket List also remembers what was in the chests, barrels, shulker boxes, hoppers, dispensers and droppers you've opened, as they were when you closed them. Anything within 32 blocks counts towards your list, so you can stand in your storage room and see what you still need. Ender chests are left out, since their contents are the same everywhere. This memory is kept for each world and each server, so it's still there next time you play.
 
@@ -69,26 +69,25 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 - Items are matched by type. A pinned potion counts any potion, and a pinned enchanted book counts any enchanted book.
 - Chest memory goes by what was there when you last closed the chest. If a hopper or a friend moves things around, open it again to refresh it.
 
-## On 1.21.1
+## On 1.20.1
 
-Everything works here as it does on Minecraft 26.x, with these small differences, all down to the game itself:
+Everything works here as it does on Minecraft 26.x and 1.21.1, with these small differences, all down to the game itself:
 
-- There are no shelves in 1.21.1 (on 26.x they count once used). Other mods' storage blocks that tell your game what they hold still count once used.
-- A decorated pot counts what your game was told when you last came near it. Putting things into a pot by hand isn't passed on to players' games in 1.21.1, so a pot you've just filled shows its new contents after you leave and come back.
-- Bundles are an experiment in 1.21.1. In a world with them turned on, what's in your bundles counts.
-- Break down knows every recipe on servers too, not only in single player (the game sends them all on 1.21.1).
+- No block in Minecraft 1.20.1 itself holds things without a screen: there are no shelves, and decorated pots can't hold items yet. So the "used storage" counting only comes up with other mods' storage blocks that tell your game what they hold (jars, canisters and the like), which count once you've used them, as on newer versions.
+- Bundles are an experiment in 1.20.1. In a world with them turned on, what's in your bundles counts.
+- Break down knows every recipe on servers too, not only in single player (the game sends them all on 1.20.1).
 
 ## Requirements
 
-- Minecraft 1.21.1 (for 26.2 and 26.3, see the main page)
-- Fabric: Fabric Loader 0.16 or newer and [Fabric API](https://modrinth.com/mod/fabric-api). Optional: [Mod Menu](https://modrinth.com/mod/modmenu), whose Config button opens the settings.
-- NeoForge: NeoForge 21.1 or newer. The settings are on the Mods screen's Config button.
+- Minecraft 1.20.1 (for 1.21.1 and for 26.2 and 26.3, see the main page)
+- Fabric: Fabric Loader 0.15 or newer and [Fabric API](https://modrinth.com/mod/fabric-api). Optional: [Mod Menu](https://modrinth.com/mod/modmenu), whose Config button opens the settings.
+- Forge: Forge 47 or newer. The settings are on the Mods screen's Config button.
 
-Optional on both: [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei). Pick the `fabric` or `neoforge` file for your loader.
+Optional on both: [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei). Pick the `fabric` or `forge` file for your loader.
 
 ## For developers
 
-This is the `1.21.1` branch; `main` is Minecraft 26.x. `./gradlew :fabric:runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list and settings screens and saving. Fabric's client game test API doesn't exist for 1.21.1, so the test brings a small harness of its own (`fabric/src/gametest/.../harness`). `./gradlew :neoforge:runClientTest` does the NeoForge jar's checks (`neoforge/src/clienttest`). Add `-PtestViewer=jei` or `-PtestViewer=rei` to either to run it with that recipe viewer installed. Screenshots land in `fabric/build/run/clientGameTest/screenshots` and `neoforge/build/run/clientTest/screenshots`. The jars are `fabric/build/libs/pocket-list-fabric-<version>.jar` and `neoforge/build/libs/pocket-list-neoforge-<version>.jar`.
+This is the `1.20.1` branch; `main` is Minecraft 26.x and `1.21.1` is 1.21.1. Building needs Java 17 where Gradle can find it, for Forge's tools (see CLAUDE.md); the code is compiled for Java 17. `./gradlew :fabric:runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list and settings screens and saving. Fabric's client game test API doesn't exist for 1.20.1, so the test brings a small harness of its own (`fabric/src/gametest/.../harness`). `./gradlew :forge:runClientTest` does the Forge jar's checks (`forge/src/clienttest`). Add `-PtestViewer=jei` or `-PtestViewer=rei` to either to run it with that recipe viewer installed. Screenshots land in `fabric/build/run/clientGameTest/screenshots` and `forge/build/run/clientTest/screenshots`. The jars are `fabric/build/libs/pocket-list-fabric-<version>.jar` and `forge/build/libs/pocket-list-forge-<version>.jar`.
 
 ## Licence
 

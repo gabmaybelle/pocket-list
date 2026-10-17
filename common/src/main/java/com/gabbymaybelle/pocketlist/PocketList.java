@@ -4,7 +4,10 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.gabbymaybelle.pocketlist.compat.Viewers;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.components.toasts.Toast;
+import net.minecraft.client.gui.components.toasts.ToastComponent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
@@ -34,8 +37,11 @@ public final class PocketList {
 	static KeyMapping pinKey = PIN_KEY;
 	static KeyMapping hudKey = HUD_KEY;
 	private static int ticks;
-	static final SystemToast.SystemToastId WELCOME = new SystemToast.SystemToastId(10000L);
-	static final SystemToast.SystemToastId FINISHED = new SystemToast.SystemToastId(5000L);
+	/** The kind of game note Pocket List's notes are (see {@link #toast}). */
+	static final SystemToast.SystemToastIds TOAST = SystemToast.SystemToastIds.TUTORIAL_HINT;
+	/** How long the welcome and "all gathered" notes stay up. */
+	static final long WELCOME_MILLIS = 10000L;
+	static final long FINISHED_MILLIS = 5000L;
 
 	private PocketList() {
 	}
@@ -78,9 +84,22 @@ public final class PocketList {
 			if (!Lists.data().welcomed) {
 				Lists.data().welcomed = true;
 				Lists.save();
-				SystemToast.add(mc.getToasts(), WELCOME,
-						Component.translatable("pocket_list.welcome.title"),
+				toast(mc, WELCOME_MILLIS, Component.translatable("pocket_list.welcome.title"),
 						Component.translatable("pocket_list.welcome.text", openKey.getTranslatedKeyMessage()));
+			}
+		});
+	}
+
+	/**
+	 * A note in the top-right corner, like the game's own, shown for this long. 1.20.1's notes come
+	 * in a fixed set of kinds with fixed times; the tutorial hint is one the game itself leaves
+	 * unused, so nothing of the game's replaces Pocket List's note, and the time is stretched here.
+	 */
+	static void toast(Minecraft mc, long millis, Component title, Component text) {
+		mc.getToasts().addToast(new SystemToast(TOAST, title, text) {
+			@Override
+			public Toast.Visibility render(GuiGraphics graphics, ToastComponent toasts, long shownFor) {
+				return super.render(graphics, toasts, shownFor * 5000L / millis);
 			}
 		});
 	}

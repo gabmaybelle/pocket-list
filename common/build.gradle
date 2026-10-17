@@ -1,25 +1,26 @@
-// Loader-neutral code. This project is compiled on its own so a Fabric or NeoForge import can't
+// Loader-neutral code. This project is compiled on its own so a Fabric or Forge import can't
 // sneak in: only Minecraft, Mixin, the recipe viewers' APIs and the JDK are on the classpath.
-// Nothing here ships as a jar; `fabric` and `neoforge` compile these sources into theirs.
+// Nothing here ships as a jar; `fabric` and `forge` compile these sources into theirs.
 plugins {
 	id 'fabric-loom' version "${loom_version}"
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	// 1.21.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
+	// 1.20.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
 	mappings loom.officialMojangMappings()
 	// Only for the Mixin annotations and the launch-side classes they need. No Fabric API here.
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	// Their NeoForge builds, which use the same Mojang names as this code, so Loom leaves them alone:
-	// remapped here, without Fabric API, a Fabric build came out half-renamed and broke the Fabric
-	// test run that shared the copy. (Modrinth version ids: JEI 19.27.0.346, REI 16.0.799,
-	// Cloth Config 15.0.140, Architectury 13.0.11.)
-	compileOnly "maven.modrinth:jei:eBag7ypX"
-	compileOnly "maven.modrinth:rei:b8gfS9Je"
-	compileOnly "maven.modrinth:cloth-config:izKINKFg"
-	compileOnly "maven.modrinth:architectury-api:1IiqEQGl"
+	// Their Forge builds, plain compile-only, so Loom leaves them alone: only the viewers' own API
+	// names and the game's class names (the same in every naming) are used from them. A Fabric
+	// build remapped here, without Fabric API, came out half-renamed on 1.21.1 and broke the Fabric
+	// test run that shared the copy. (Modrinth version ids: JEI 15.56.0.205, REI 12.1.785,
+	// Cloth Config 11.1.136, Architectury 9.2.14.)
+	compileOnly "maven.modrinth:jei:9jqubC9n"
+	compileOnly "maven.modrinth:rei:IoS2AjPk"
+	compileOnly "maven.modrinth:cloth-config:t8TXrZvZ"
+	compileOnly "maven.modrinth:architectury-api:1MKTLiiG"
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 }
 

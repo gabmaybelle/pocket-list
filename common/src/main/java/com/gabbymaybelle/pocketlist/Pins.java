@@ -8,7 +8,6 @@ import com.gabbymaybelle.pocketlist.compat.RecipeViewer;
 import com.gabbymaybelle.pocketlist.compat.Viewers;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.serialization.JsonOps;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -27,7 +26,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.SmithingTransformRecipe;
 
 /**
@@ -113,18 +111,18 @@ public final class Pins {
 	}
 
 	private static boolean pinRecipe(Minecraft mc, RecipeButton button, boolean shift) {
-		RecipeHolder<?> holder = button.getRecipe();
-		if (holder == null) {
+		Recipe<?> recipe = button.getRecipe();
+		if (recipe == null) {
 			return false;
 		}
-		List<Entry> ingredients = ingredients(holder.value());
+		List<Entry> ingredients = ingredients(recipe);
 		if (ingredients.isEmpty()) {
 			return false;
 		}
 		int crafts = 1;
 		if (shift) {
 			// Enough crafts for a full stack of whatever the recipe makes.
-			ItemStack result = holder.value().getResultItem(mc.level.registryAccess());
+			ItemStack result = recipe.getResultItem(mc.level.registryAccess());
 			if (!result.isEmpty()) {
 				crafts = Math.max(1, (result.getMaxStackSize() + result.getCount() - 1) / Math.max(1, result.getCount()));
 			}
@@ -140,7 +138,7 @@ public final class Pins {
 	static List<Entry> ingredients(Recipe<?> recipe) {
 		List<Ingredient> slots;
 		if (recipe instanceof SmithingTransformRecipe smithing) {
-			// Smithing recipes don't list their inputs as ingredients on 1.21.1.
+			// Smithing recipes don't list their inputs as ingredients on 1.20.1.
 			SmithingTransformRecipeAccessor inputs = (SmithingTransformRecipeAccessor) smithing;
 			slots = List.of(inputs.pocketList$template(), inputs.pocketList$base(), inputs.pocketList$addition());
 		} else {
@@ -176,11 +174,11 @@ public final class Pins {
 
 	/**
 	 * The item tag an ingredient stands for ("any planks"), if it's just one tag. The game keeps that
-	 * to itself on 1.21.1, but writes it out the way a recipe file says it: {"tag": "minecraft:planks"}.
+	 * to itself on 1.20.1, but writes it out the way a recipe file says it: {"tag": "minecraft:planks"}.
 	 */
 	private static TagKey<Item> tagOf(Ingredient ingredient) {
 		try {
-			JsonElement json = Ingredient.CODEC_NONEMPTY.encodeStart(JsonOps.INSTANCE, ingredient).result().orElse(null);
+			JsonElement json = ingredient.toJson();
 			if (json instanceof JsonObject object && object.size() == 1 && object.has("tag")) {
 				ResourceLocation id = ResourceLocation.tryParse(object.get("tag").getAsString());
 				return id == null ? null : TagKey.create(Registries.ITEM, id);

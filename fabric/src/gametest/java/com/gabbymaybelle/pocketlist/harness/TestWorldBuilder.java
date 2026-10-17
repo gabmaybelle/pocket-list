@@ -9,7 +9,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
 
 /**
  * Makes a fresh singleplayer world through the game's own create-world screen: flat, survival,
- * peaceful, commands on and seed 1, much as Fabric's client game test does on 26.x. The
+ * peaceful, commands on and seed 1, much as Fabric's client game test does on newer versions. The
  * world's folder gets the time in its name, so a run never reopens a world an earlier run left.
  */
 public final class TestWorldBuilder {
@@ -41,7 +41,7 @@ public final class TestWorldBuilder {
 			ui.setName("Pocket List test " + System.currentTimeMillis());
 			ui.setGameMode(WorldCreationUiState.SelectedGameMode.SURVIVAL);
 			ui.setDifficulty(Difficulty.PEACEFUL);
-			ui.setAllowCommands(true);
+			ui.setAllowCheats(true);
 			ui.setSeed("1");
 			if (flat) {
 				ui.getNormalPresetList().stream().filter(entry -> entry.preset().is(WorldPresets.FLAT)).findFirst().ifPresent(ui::setWorldType);

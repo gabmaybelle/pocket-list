@@ -41,7 +41,7 @@ public class ScreenshotTour implements ClientGameTest {
 			state.setSeed("pocket list");
 			state.setGameMode(WorldCreationUiState.SelectedGameMode.SURVIVAL);
 			state.setDifficulty(Difficulty.PEACEFUL);
-			state.setAllowCommands(true);
+			state.setAllowCheats(true);
 		}).create()) {
 			world.waitForChunksRender();
 			TestServerContext server = world.getServer();
@@ -88,7 +88,7 @@ public class ScreenshotTour implements ClientGameTest {
 			ctx.runOnClient(mc -> {
 				Lists.add(Entry.ofItem(Items.IRON_INGOT, 9));
 				((PocketListScreen) mc.screen).changed();
-				Entry iron = Lists.active().entries.getLast();
+				Entry iron = Lists.active().entries.get(Lists.active().entries.size() - 1);
 				mc.setScreen(new RecipeChooserScreen((PocketListScreen) mc.screen, iron, Recipes.forItem(mc, Items.IRON_INGOT)));
 			});
 			ctx.waitTicks(5);

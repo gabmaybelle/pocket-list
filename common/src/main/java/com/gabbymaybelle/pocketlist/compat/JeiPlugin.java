@@ -10,7 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 public class JeiPlugin implements IModPlugin {
 	@Override
 	public ResourceLocation getPluginUid() {
-		return ResourceLocation.fromNamespaceAndPath(PocketList.MOD_ID, "jei");
+		return new ResourceLocation(PocketList.MOD_ID, "jei");
 	}
 
 	@Override

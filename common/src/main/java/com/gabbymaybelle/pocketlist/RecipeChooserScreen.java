@@ -7,6 +7,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
 /** When something can be made more than one way: pick the recipe to break a line down with. */
@@ -40,7 +41,7 @@ public class RecipeChooserScreen extends Screen {
 		int left = (width - panel) / 2;
 		perPage = Math.max(1, (height - TOP - 60) / ROW);
 		int pages = (recipes.size() + perPage - 1) / perPage;
-		page = Math.clamp(page, 0, pages - 1);
+		page = Mth.clamp(page, 0, pages - 1);
 		for (int i = 0; i < perPage; i++) {
 			int index = page * perPage + i;
 			if (index >= recipes.size()) {
@@ -65,6 +66,8 @@ public class RecipeChooserScreen extends Screen {
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		// 1.20.1 screens draw their own backdrop.
+		renderBackground(graphics);
 		super.render(graphics, mouseX, mouseY, partialTick);
 		graphics.drawCenteredString(font, title, width / 2, 12, TEXT);
 		graphics.drawCenteredString(font, Component.translatable("pocket_list.chooser.hint"), width / 2, 24, MUTED);

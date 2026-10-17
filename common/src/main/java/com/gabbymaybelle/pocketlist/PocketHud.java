@@ -3,7 +3,6 @@ package com.gabbymaybelle.pocketlist;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,14 +31,16 @@ public final class PocketHud {
 	private PocketHud() {
 	}
 
-	/** The HUD element's id; each loader registers {@link #extract} under it. */
-	public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(PocketList.MOD_ID, "list");
+	/** The HUD element's id; each loader registers {@link #render} under it. */
+	public static final ResourceLocation ID = new ResourceLocation(PocketList.MOD_ID, "list");
 
-	public static void render(GuiGraphics graphics, DeltaTracker delta) {
+	public static void render(GuiGraphics graphics, float partialTick) {
 		Minecraft mc = Minecraft.getInstance();
 		Lists.PocketListData list = Lists.active();
 		if (!Lists.data().hud || list.entries.isEmpty() || mc.player == null
-				|| mc.getDebugOverlay().showDebugScreen() || mc.screen instanceof PocketListScreen) {
+				|| mc.options.renderDebug || mc.screen instanceof PocketListScreen
+				// 1.20.1 screens dim the game behind them rather than blur it, so the list would show through.
+				|| mc.screen instanceof RecipeChooserScreen || mc.screen instanceof PocketListSettingsScreen) {
 			return;
 		}
 		Font font = mc.font;
@@ -119,7 +120,7 @@ public final class PocketHud {
 		boolean harmful = false;
 		for (MobEffectInstance effect : mc.player.getActiveEffects()) {
 			if (effect.showIcon()) {
-				if (effect.getEffect().value().isBeneficial()) {
+				if (effect.getEffect().isBeneficial()) {
 					beneficial = true;
 				} else {
 					harmful = true;

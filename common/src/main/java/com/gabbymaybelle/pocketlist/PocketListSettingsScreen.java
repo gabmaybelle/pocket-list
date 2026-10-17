@@ -6,8 +6,12 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.OptionsList;
+import net.minecraft.client.gui.screens.OptionsSubScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.options.OptionsSubScreen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -16,18 +20,33 @@ import net.minecraft.network.chat.Component;
  * Changes show straight away and are saved when the screen closes.
  */
 public class PocketListSettingsScreen extends OptionsSubScreen {
+	private OptionsList list;
+
 	public PocketListSettingsScreen(Screen parent) {
 		super(parent, Minecraft.getInstance().options, Component.translatable("pocket_list.options.title"));
 	}
 
 	@Override
-	protected void addOptions() {
+	protected void init() {
+		// Laid out like the game's own option screens on 1.20.1: the list of options, then Done.
+		list = new OptionsList(minecraft, width, height, 32, height - 32, 25);
 		Lists.Data data = Lists.data();
-		list.addSmall(
+		list.addSmall(new OptionInstance<?>[] {
 				toggle("hud", data.hud, v -> data.hud = v),
 				choice("hudPosition", Lists.HudPosition.values(), data.hudPosition, v -> data.hudPosition = v),
 				slider("hudLines", data.hudLines, 1, Lists.MAX_HUD_LINES, v -> data.hudLines = v),
-				toggle("countChests", data.countChests, v -> data.countChests = v));
+				toggle("countChests", data.countChests, v -> data.countChests = v) });
+		addWidget(list);
+		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
+				.bounds(width / 2 - 100, height - 27, 200, 20).build());
+	}
+
+	@Override
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		renderBackground(graphics);
+		list.render(graphics, mouseX, mouseY, partialTick);
+		graphics.drawCenteredString(font, title, width / 2, 5, 0xFFFFFF);
+		super.render(graphics, mouseX, mouseY, partialTick);
 	}
 
 	@Override

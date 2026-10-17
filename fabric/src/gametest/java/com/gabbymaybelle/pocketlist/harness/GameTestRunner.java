@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The test harness: Fabric's client game test API doesn't exist for 1.21.1, so this is the
+ * The test harness: Fabric's client game test API doesn't exist for 1.20.1, so this is the
  * little of it the tests use. With the {@code pocket_list.gametest} system property set
  * (the {@code runClientGameTest} task sets it), the tests run on their own thread once the title
  * screen is up; they drive the game through {@link ClientGameTestContext}, which hands work to

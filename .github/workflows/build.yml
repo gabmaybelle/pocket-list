@@ -1,5 +1,5 @@
-# Builds the Fabric and NeoForge jars for Minecraft 1.21.1 on every push and pull request, then runs
-# both in-game tests (Fabric's in fabric/src/gametest, NeoForge's in neoforge/src/clienttest) on a
+# Builds the Fabric and Forge jars for Minecraft 1.20.1 on every push and pull request, then runs
+# both in-game tests (Fabric's in fabric/src/gametest, Forge's in forge/src/clienttest) on a
 # virtual display, so a broken build or a crash in game shows up straight away. The tests also run
 # with each optional mod the mod works with installed (JEI, REI). The built jars are attached to each
 # run under "Artifacts", and the game tests' screenshots alongside them.
@@ -25,34 +25,37 @@ jobs:
             test_args: '-PtestViewer=jei'
           - variant: 'with REI'
             test_args: '-PtestViewer=rei'
-    name: build (Minecraft 1.21.1, ${{ matrix.variant }})
+    name: build (Minecraft 1.20.1, ${{ matrix.variant }})
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
       - name: validate gradle wrapper
         uses: gradle/actions/wrapper-validation@v6
-      - name: setup jdk
+      - name: setup jdks
+        # Gradle runs on 25 and compiles the code for Java 17 (1.20.1's); Forge's build tools and the
+        # test games run on 17, which Gradle finds by its environment variable.
         uses: actions/setup-java@v5
         with:
-          java-version: '25'
-          # The code is compiled for Java 21 (1.21.1's) by this newer JDK.
+          java-version: |
+            17
+            25
           distribution: 'microsoft'
       - name: setup gradle (with caching)
         uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build
-        run: ./gradlew build
+        run: ./gradlew build -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64
       - name: run game test
         timeout-minutes: 15
-        run: xvfb-run -a ./gradlew :fabric:runClientGameTest ${{ matrix.test_args }}
-      - name: run NeoForge game test
-        # The NeoForge jar's checks (neoforge/src/clienttest), in every variant: with JEI or REI it
+        run: xvfb-run -a ./gradlew :fabric:runClientGameTest ${{ matrix.test_args }} -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64
+      - name: run Forge game test
+        # The Forge jar's checks (forge/src/clienttest), in every variant: with JEI or REI it
         # also pins from the viewer's list. A failed check crashes the game, which fails this step;
         # the crash report is uploaded with the screenshots.
         if: always()
         timeout-minutes: 12
-        run: xvfb-run -a ./gradlew :neoforge:runClientTest ${{ matrix.test_args }}
+        run: xvfb-run -a ./gradlew :forge:runClientTest ${{ matrix.test_args }} -Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64
       - name: capture game test screenshots
         if: always()
         uses: actions/upload-artifact@v7
@@ -60,8 +63,8 @@ jobs:
           name: Game test screenshots (${{ matrix.variant }})
           path: |
             fabric/build/run/clientGameTest/screenshots/
-            neoforge/build/run/clientTest/screenshots/
-            neoforge/build/run/clientTest/crash-reports/
+            forge/build/run/clientTest/screenshots/
+            forge/build/run/clientTest/crash-reports/
           if-no-files-found: ignore
       - name: capture build artifacts
         if: matrix.variant == 'on its own'
@@ -70,4 +73,4 @@ jobs:
           name: Artifacts
           path: |
             fabric/build/libs/
-            neoforge/build/libs/
+            forge/build/libs/

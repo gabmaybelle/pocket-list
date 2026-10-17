@@ -15,12 +15,11 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 
 /**
  * Finds the ways to make an item, from the best source there is:
  * <ol>
- * <li>the recipes the world or server sent your game when you joined: on 1.21.1 that's every
+ * <li>the recipes the world or server sent your game when you joined: on 1.20.1 that's every
  * recipe, unlocked or not, in single player and on servers alike;</li>
  * <li>an installed recipe viewer (JEI or REI);</li>
  * <li>your recipe book, which only has the recipes you've unlocked.</li>
@@ -58,8 +57,8 @@ public final class Recipes {
 		RegistryAccess registries = mc.level.registryAccess();
 		try {
 			List<FoundRecipe> out = new ArrayList<>();
-			for (RecipeHolder<?> holder : List.copyOf(mc.level.getRecipeManager().getRecipes())) {
-				FoundRecipe recipe = fromRecipe(holder.value(), item, registries);
+			for (Recipe<?> each : List.copyOf(mc.level.getRecipeManager().getRecipes())) {
+				FoundRecipe recipe = fromRecipe(each, item, registries);
 				if (recipe != null) {
 					out.add(recipe);
 				}
@@ -78,8 +77,8 @@ public final class Recipes {
 		RegistryAccess registries = mc.level.registryAccess();
 		List<FoundRecipe> out = new ArrayList<>();
 		for (RecipeCollection collection : mc.player.getRecipeBook().getCollections()) {
-			for (RecipeHolder<?> holder : collection.getRecipes()) {
-				FoundRecipe recipe = fromRecipe(holder.value(), item, registries);
+			for (Recipe<?> each : collection.getRecipes()) {
+				FoundRecipe recipe = fromRecipe(each, item, registries);
 				if (recipe != null) {
 					out.add(recipe);
 				}
@@ -133,7 +132,7 @@ public final class Recipes {
 		List<FoundRecipe> out = new ArrayList<>();
 		for (List<FoundRecipe> group : same.values()) {
 			group.sort(Comparator.comparingInt(Recipes::stationRank));
-			FoundRecipe main = group.getFirst();
+			FoundRecipe main = group.get(0);
 			List<String> others = group.stream().skip(1).map(r -> r.where().getString())
 					.filter(w -> !w.equals(main.where().getString())).distinct().toList();
 			Component where = others.isEmpty() ? main.where()
@@ -155,6 +154,6 @@ public final class Recipes {
 	}
 
 	private static boolean unpacksBlock(FoundRecipe recipe) {
-		return recipe.makes() == 9 && recipe.ingredients().size() == 1 && recipe.ingredients().getFirst().need == 1;
+		return recipe.makes() == 9 && recipe.ingredients().size() == 1 && recipe.ingredients().get(0).need == 1;
 	}
 }

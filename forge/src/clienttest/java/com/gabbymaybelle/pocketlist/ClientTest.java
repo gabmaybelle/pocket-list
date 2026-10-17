@@ -21,22 +21,22 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * A small step-by-step in-game test for the NeoForge jar, since NeoForge has no client game test
- * framework like Fabric's. It only runs in the `clientTest` run (`./gradlew :neoforge:runClientTest`),
+ * A small step-by-step in-game test for the Forge jar, since Forge has no client game test
+ * framework like Fabric's. It only runs in the `clientTest` run (`./gradlew :forge:runClientTest`),
  * which sets the system property below; this source set is never in the jar players get.
  *
  * <p>Each step runs on the game's own thread, one or more ticks at a time. A failed check throws,
  * which crashes the game with a crash report and a non-zero exit code, so Gradle (and CI) fail.
  * When every step has passed, the game closes normally. A watchdog ends a run that hangs.
  */
-@EventBusSubscriber(modid = PocketList.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = PocketList.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 final class ClientTest {
 	static final boolean ENABLED = Boolean.getBoolean(PocketList.MOD_ID + ".clienttest");
 	/** A run that takes longer than this has hung (the game thread may be stuck, so a separate thread checks). */
@@ -102,7 +102,7 @@ final class ClientTest {
 
 	/**
 	 * Presses and lets go of a key through the game's own keyboard handler, the way a player's key
-	 * press arrives, so NeoForge's screen key events fire as they do in play.
+	 * press arrives, so Forge's screen key events fire as they do in play.
 	 */
 	static void pressKey(String keyName, boolean shift) {
 		run(mc -> {
@@ -208,21 +208,22 @@ final class ClientTest {
 		run(mc -> mc.createWorldOpenFlows().createFreshLevel(name,
 				new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, new GameRules(), WorldDataConfiguration.DEFAULT),
 				new WorldOptions(1L, false, false),
-				registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).createWorldDimensions(),
-				mc.screen));
+				registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).createWorldDimensions()));
 		waitUntil("the player in the new world", 2400, mc -> mc.player != null && mc.level != null && mc.screen == null);
 		// Time for the chunks around the player to arrive and draw.
 		waitTicks(60);
 	}
 
 	@SubscribeEvent
-	static void onTick(ClientTickEvent.Post event) {
-		if (!ENABLED || finished) {
+	static void onTick(TickEvent.ClientTickEvent event) {
+		if (!ENABLED || finished || event.phase != TickEvent.Phase.END) {
 			return;
 		}
 		Minecraft mc = Minecraft.getInstance();
 		if (!started) {
 			started = true;
+			// The window is rarely in front while the test runs; a pause would stop the world.
+			mc.options.pauseOnLostFocus = false;
 			PocketList.LOGGER.info("Pocket List: client test starting");
 			Thread watchdog = new Thread(() -> {
 				try {

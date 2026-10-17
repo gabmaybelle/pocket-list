@@ -24,7 +24,7 @@ public final class TestSingleplayerContext implements AutoCloseable {
 
 	/** Waits until the chunk the player stands in has been built for rendering. */
 	public void waitForChunksRender() {
-		ctx.waitFor(mc -> mc.player != null && mc.levelRenderer.isSectionCompiled(mc.player.blockPosition()), 2400);
+		ctx.waitFor(mc -> mc.player != null && mc.levelRenderer.isChunkCompiled(mc.player.blockPosition()), 2400);
 		ctx.waitTicks(20);
 	}
 
@@ -34,7 +34,7 @@ public final class TestSingleplayerContext implements AutoCloseable {
 			if (mc.level != null) {
 				mc.level.disconnect();
 			}
-			mc.disconnect();
+			mc.clearLevel();
 		});
 		ctx.waitFor(mc -> mc.getSingleplayerServer() == null && mc.level == null, 1200);
 	}

@@ -121,7 +121,7 @@ final class JeiViewer implements RecipeViewer {
 		if (stacks.isEmpty()) {
 			return null;
 		}
-		int count = stacks.getFirst().getCount();
+		int count = stacks.get(0).getCount();
 		Optional<TagKey<?>> tag = tagKey(slot);
 		if (tag.isPresent() && tag.get().registry().equals(Registries.ITEM)) {
 			return Entry.ofTag((TagKey<Item>) tag.get(), count);

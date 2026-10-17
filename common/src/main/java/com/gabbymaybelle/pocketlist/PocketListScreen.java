@@ -14,6 +14,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.Util;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -88,7 +89,7 @@ public class PocketListScreen extends Screen {
 		int bottomBlock = 24 + 22 + 24 + 28;
 		rowsPerPage = Math.max(2, (height - TOP - bottomBlock) / ROW);
 		int pages = pages(list);
-		page = Math.clamp(page, 0, pages - 1);
+		page = Mth.clamp(page, 0, pages - 1);
 		for (int i = 0; i < rowsPerPage; i++) {
 			int index = page * rowsPerPage + i;
 			if (index >= list.entries.size()) {
@@ -231,7 +232,7 @@ public class PocketListScreen extends Screen {
 		if (recipes.isEmpty()) {
 			showMessage(Component.translatable("pocket_list.screen.no_recipe", entry.name()));
 		} else if (recipes.size() == 1) {
-			Lists.breakDown(entry, recipes.getFirst());
+			Lists.breakDown(entry, recipes.get(0));
 			changed();
 		} else {
 			minecraft.setScreen(new RecipeChooserScreen(this, entry, recipes));
@@ -311,6 +312,8 @@ public class PocketListScreen extends Screen {
 
 	@Override
 	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		// 1.20.1 screens draw their own backdrop.
+		renderBackground(graphics);
 		super.render(graphics, mouseX, mouseY, partialTick);
 		graphics.drawCenteredString(font, title, width / 2, 10, TEXT);
 		Lists.PocketListData list = Lists.active();
@@ -357,14 +360,14 @@ public class PocketListScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		int next = Math.clamp(page - (int) Math.signum(scrollY), 0, pages(Lists.active()) - 1);
+	public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
+		int next = Mth.clamp(page - (int) Math.signum(scrollY), 0, pages(Lists.active()) - 1);
 		if (next != page) {
 			page = next;
 			rebuildWidgets();
 			return true;
 		}
-		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+		return super.mouseScrolled(mouseX, mouseY, scrollY);
 	}
 
 	@Override
@@ -403,7 +406,7 @@ public class PocketListScreen extends Screen {
 			boolean was = isFocused();
 			super.setFocused(focused);
 			if (focused && !was) {
-				moveCursorToEnd(false);
+				moveCursorToEnd();
 				setHighlightPos(0);
 			}
 		}

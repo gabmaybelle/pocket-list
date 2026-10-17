@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0+1.20.1
+
+Pocket List for Minecraft 1.20.1, on Fabric and Forge: the same mod as 0.2.0 for 26.x and 0.2.0+1.21.1, with the HUD checklist, the list and settings screens, pinning with Z from inventories, the recipe book, JEI and REI, Break down, and chest memory. What's different on 1.20.1, all down to the game itself:
+
+- No block in 1.20.1 itself holds things without a screen (no shelves, and decorated pots can't hold items yet). Other mods' storage blocks that tell your game what they hold count once you've used them, as on newer versions.
+- Break down knows every recipe on servers as well as in single player, since 1.20.1 sends your game all of them.
+- Bundles are an experiment in 1.20.1; in a world with them on, what's inside counts.
+- On Forge, the settings are on the Mods screen's Config button.
+- Fixed here: a brand-new player's first list was called `pocket_list.default_name` instead of "List 1".
+
 ## 0.2.0+1.21.1
 
 Pocket List for Minecraft 1.21.1, on Fabric and NeoForge: the same mod as 0.2.0 for 26.x, with the HUD checklist, the list and settings screens, pinning with Z from inventories, the recipe book, JEI and REI, Break down, and chest memory. What's different on 1.21.1, all down to the game itself:

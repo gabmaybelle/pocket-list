@@ -28,27 +28,27 @@ loom {
 dependencies {
 	// Versions are in gradle.properties.
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	// 1.21.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
+	// 1.20.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	// Mod Menu: only for the Config button; not bundled or required.
 	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	// (Modrinth version ids, Fabric builds: JEI 19.27.0.346, REI 16.0.799, Cloth Config 15.0.140, Architectury 13.0.11.)
-	modCompileOnly "maven.modrinth:jei:GiaHNQuZ"
-	modCompileOnly "maven.modrinth:rei:aWzTESNC"
-	modCompileOnly "maven.modrinth:cloth-config:HpMb5wGb"
-	modCompileOnly "maven.modrinth:architectury-api:Pzc2FP5K"
+	// (Modrinth version ids, Fabric builds: JEI 15.56.0.205, REI 12.1.785, Cloth Config 11.1.136, Architectury 9.2.14.)
+	modCompileOnly "maven.modrinth:jei:YRfUnbXb"
+	modCompileOnly "maven.modrinth:rei:nYcMSS03"
+	modCompileOnly "maven.modrinth:cloth-config:2xQdCMyG"
+	modCompileOnly "maven.modrinth:architectury-api:WbL7MStR"
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 
 	// `./gradlew :fabric:runClientGameTest -PtestViewer=jei` (or rei) runs the game test with that viewer installed.
 	if (project.findProperty("testViewer") == "jei") {
-		modLocalRuntime "maven.modrinth:jei:GiaHNQuZ"
+		modLocalRuntime "maven.modrinth:jei:YRfUnbXb"
 	} else if (project.findProperty("testViewer") == "rei") {
-		modLocalRuntime "maven.modrinth:rei:aWzTESNC"
-		modLocalRuntime "maven.modrinth:cloth-config:HpMb5wGb"
-		modLocalRuntime "maven.modrinth:architectury-api:Pzc2FP5K"
+		modLocalRuntime "maven.modrinth:rei:nYcMSS03"
+		modLocalRuntime "maven.modrinth:cloth-config:2xQdCMyG"
+		modLocalRuntime "maven.modrinth:architectury-api:WbL7MStR"
 		// Carried inside REI's jar, which a dev run doesn't unpack.
 		localRuntime "me.shedaniel.cloth:basic-math:0.6.1"
 	}
@@ -65,7 +65,7 @@ processResources {
 
 // Client game tests: `./gradlew :fabric:runClientGameTest` starts a real game, creates a test
 // world and drives it (keys, clicks, screenshots) from src/gametest. Nothing there ships in the
-// jar. Fabric's client game test API doesn't exist for 1.21.1, so the harness is the test's own
+// jar. Fabric's client game test API doesn't exist for 1.20.1, so the harness is the test's own
 // (src/gametest/.../harness) and the run is a plain client run with the test source set as a
 // second mod.
 sourceSets {
@@ -108,3 +108,9 @@ tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('remapJar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('remapSourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }
+
+// The game runs (dev client, game tests) use Java 17, as players' 1.20.1 does: the Mixin of 1.20.1's
+// loaders can't read the classes of a newer Java.
+tasks.withType(JavaExec).configureEach {
+	javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+}

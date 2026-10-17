@@ -23,7 +23,9 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
@@ -31,22 +33,21 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.entity.ChiseledBookShelfBlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.fml.ModList;
+import net.minecraftforge.fml.ModList;
 
 /**
- * The NeoForge jar's in-game test, a part of the Fabric game test (fabric/src/gametest) that covers
- * what NeoForge does differently: the default keys, counting what's carried (bundles and shulker
- * boxes too), chest memory through the screen path, a decorated pot through NeoForge's item storage,
- * pinning with the pin key through NeoForge's screen key event (and, with JEI or REI installed,
+ * The Forge jar's in-game test, a part of the Fabric game test (fabric/src/gametest) that covers
+ * what Forge does differently: the default keys, counting what's carried (bundles and shulker
+ * boxes too), chest memory through the screen path, a used storage block through Forge's item
+ * handler, pinning with the pin key through Forge's screen key event (and, with JEI or REI installed,
  * from the viewer's item list, but not while typing in its search box), and the list and
  * settings screens.
  */
 final class PocketListClientTest {
-	/** Where the test's chests and shelf go, next to where the player starts. */
+	/** Where the test's chests and bookshelf go, next to where the player starts. */
 	private static BlockPos here;
 	/** What the list needed before a key press, to compare with after it. */
 	private static Map<String, Integer> before;
@@ -66,6 +67,8 @@ final class PocketListClientTest {
 		});
 		createWorld("pocket_list-clienttest");
 		command("gamemode survival @a");
+		// The first list is made while the game starts, before its language files are read.
+		run(mc -> check(Lists.active().name.equals("List 1"), "A new player's first list isn't called List 1: " + Lists.active().name));
 
 		counting();
 		chestMemory();
@@ -91,10 +94,10 @@ final class PocketListClientTest {
 		command("give @a minecraft:oak_log 6");
 		command("give @a minecraft:spruce_log 6");
 		command("give @a minecraft:stick 3");
-		// Bundles are an experiment on 1.21.1 that this world doesn't have, so the torches come in a
-		// shulker box; a bundle is checked on its own below.
-		command("give @a orange_shulker_box[container=[{slot:0,item:{id:\"minecraft:torch\",count:10}}]]");
-		command("give @a white_shulker_box[container=[{slot:0,item:{id:\"minecraft:cobblestone\",count:64}}]]");
+		// Bundles are an experiment on 1.20.1 that this world doesn't have, so the torches come in a
+		// shulker box; a bundle is checked on its own below. 1.20.1 keeps what's inside in the NBT.
+		command("give @a orange_shulker_box{BlockEntityTag:{Items:[{Slot:0b,id:\"minecraft:torch\",Count:10b}]}}");
+		command("give @a white_shulker_box{BlockEntityTag:{Items:[{Slot:0b,id:\"minecraft:cobblestone\",Count:64b}]}}");
 		waitUntil("the given items in the inventory", 200,
 				mc -> mc.player.getInventory().countItem(Items.ORANGE_SHULKER_BOX) >= 1 && mc.player.getInventory().countItem(Items.WHITE_SHULKER_BOX) >= 1
 						&& mc.player.getInventory().countItem(Items.STICK) >= 3);
@@ -106,10 +109,17 @@ final class PocketListClientTest {
 		expectHave("minecraft:iron_ingot", 0);
 		// What's in a bundle counts too, and a bundle in a shulker box.
 		run(mc -> {
+			// A bundle's NBT as the game writes it: {Items:[{id:"minecraft:torch",Count:7b}]}.
 			ItemStack bundle = new ItemStack(Items.BUNDLE);
-			bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(Items.TORCH, 7))));
+			ListTag inBundle = new ListTag();
+			inBundle.add(new ItemStack(Items.TORCH, 7).save(new CompoundTag()));
+			bundle.getOrCreateTag().put("Items", inBundle);
 			ItemStack box = new ItemStack(Items.WHITE_SHULKER_BOX);
-			box.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(bundle.copy())));
+			ListTag inBox = new ListTag();
+			CompoundTag slot = bundle.copy().save(new CompoundTag());
+			slot.putByte("Slot", (byte) 0);
+			inBox.add(slot);
+			box.getOrCreateTagElement("BlockEntityTag").put("Items", inBox);
 			Map<Item, Integer> totals = new HashMap<>();
 			Counter.add(bundle, totals, 0);
 			Counter.add(box, totals, 0);
@@ -119,12 +129,12 @@ final class PocketListClientTest {
 		screenshot();
 	}
 
-	/** Chests through their screens, never twice for a double chest, never an ender chest; a shelf through item storage. */
+	/** Chests through their screens, never twice for a double chest, never an ender chest; a used storage block through item storage. */
 	private static void chestMemory() {
 		run(mc -> here = mc.player.blockPosition());
 		// A double chest facing north: the left half connects east, to the right half.
-		setblockAt(2, 0, "chest[facing=north,type=left]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",count:3}]}");
-		setblockAt(3, 0, "chest[facing=north,type=right]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",count:1}]}");
+		setblockAt(2, 0, "chest[facing=north,type=left]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",Count:3b}]}");
+		setblockAt(3, 0, "chest[facing=north,type=right]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",Count:1b}]}");
 		setblockAt(4, 0, "ender_chest[facing=north]");
 		command("item replace entity @a enderchest.0 with iron_ingot 1");
 
@@ -137,36 +147,33 @@ final class PocketListClientTest {
 		openAndClose(4, 0);
 		expectHave("minecraft:iron_ingot", 4);
 
-		// A decorated pot holds things without opening a screen, and the game tells every player what's
-		// in it when its chunk loads (or a command changes it). Using it with an empty hand only wobbles
-		// it; it's remembered through NeoForge's item storage.
-		setblockAt(2, 2, "decorated_pot{item:{id:\"minecraft:iron_ingot\",count:2}}");
+		// A block that holds things without opening a screen, and whose contents the game tells every
+		// player (a modded jar or canister), is remembered through its item storage once used. 1.20.1
+		// has no such block of its own (decorated pots only hold items in later versions), so this stands in
+		// for one: a chiseled bookshelf has Forge's item handler, and the test puts two iron ingots into
+		// the player's own copy of it, as such a mod's update would. Using it on top opens nothing.
+		setblockAt(2, 2, "chiseled_bookshelf[facing=north]");
 		command("item replace entity @a hotbar.8 with air");
 		run(mc -> mc.player.getInventory().selected = 8);
+		shelfHolds(2);
 		recount();
-		// Not used yet: nothing from the pot counts.
+		// Not used yet: nothing from the shelf counts.
 		expectHave("minecraft:iron_ingot", 4);
 		run(mc -> {
-			BlockPos pot = here.offset(2, 0, 2);
-			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pot), Direction.UP, pot, false));
+			BlockPos shelf = here.offset(2, 0, 2);
+			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(shelf), Direction.UP, shelf, false));
 		});
 		waitTicks(ChestMemory.STORAGE_WAIT + 5);
-		run(mc -> check(mc.screen == null, "A decorated pot opened a screen"));
+		run(mc -> check(mc.screen == null, "Using a bookshelf on top opened a screen"));
 		recount();
-		// Four in the chests and two in the pot.
+		// Four in the chests and two on the shelf.
 		expectHave("minecraft:iron_ingot", 6);
 		run(mc -> Lists.data().countChests = false);
 		recount();
 		expectHave("minecraft:iron_ingot", 0);
 		run(mc -> Lists.data().countChests = true);
-		// When the game is told the pot changed, the count follows without using it again.
-		run(mc -> {
-			BlockPos pot = here.offset(2, 0, 2);
-			IntegratedServer server = mc.getSingleplayerServer();
-			String command = "data merge block " + pot.getX() + " " + pot.getY() + " " + pot.getZ() + " {item:{id:\"minecraft:iron_ingot\",count:3}}";
-			server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
-		});
-		waitTicks(4);
+		// When the game hears the shelf changed, the count follows without using it again.
+		shelfHolds(3);
 		recount();
 		expectHave("minecraft:iron_ingot", 7);
 		run(mc -> mc.player.getInventory().selected = 0);
@@ -174,13 +181,18 @@ final class PocketListClientTest {
 
 	/**
 	 * The pin key over an inventory slot adds one of that item to the list; with Shift, a stack. The
-	 * key goes through the game's keyboard handler, so it reaches Pocket List by NeoForge's screen
+	 * key goes through the game's keyboard handler, so it reaches Pocket List by Forge's screen
 	 * key event, as in play.
 	 */
 	private static void pinning() {
 		openInventory();
 		pointAtSlotWith(Items.STICK);
-		run(mc -> check(Pins.hoveredItem(mc, mc.screen).is(Items.STICK), "The mouse isn't over the sticks' slot"));
+		// The screen sees where the mouse is when it next draws, which a busy game can put off for a few
+		// ticks, and a real cursor passing over the window moves the game's mouse: point again each tick.
+		waitUntil("the mouse over the sticks' slot", 200, mc -> {
+			ClientTest.placeMouse(mc, target[0], target[1]);
+			return Pins.hoveredItem(mc, mc.screen).is(Items.STICK);
+		});
 		run(mc -> before = needs());
 		pressKey("key.keyboard.z", false);
 		run(mc -> expectNeed("minecraft:stick", before.getOrDefault("minecraft:stick", 0) + 1));
@@ -218,7 +230,7 @@ final class PocketListClientTest {
 		run(mc -> before = needs());
 		pressKey("key.keyboard.z", false);
 		run(mc -> check(needs().equals(before), "Pressing Z while typing in the recipe viewer's search pinned something: " + needs()));
-		run(mc -> check(!Viewers.all().isEmpty() && !Viewers.all().getFirst().recipesFor(Items.LANTERN).isEmpty(),
+		run(mc -> check(!Viewers.all().isEmpty() && !Viewers.all().get(0).recipesFor(Items.LANTERN).isEmpty(),
 				"The recipe viewer doesn't know how to make a lantern"));
 		run(mc -> mc.setScreen(null));
 		waitTicks(3);
@@ -354,6 +366,16 @@ final class PocketListClientTest {
 		waitUntil("the settings screen", 40, mc -> mc.screen instanceof PocketListSettingsScreen);
 		run(mc -> mc.setScreen(null));
 		waitTicks(5);
+	}
+
+	/** Puts this many iron ingots in the first slot of the player's own copy of the chiseled bookshelf. */
+	@SuppressWarnings("unchecked")
+	private static void shelfHolds(int count) {
+		run(mc -> {
+			ChiseledBookShelfBlockEntity shelf = (ChiseledBookShelfBlockEntity) mc.level.getBlockEntity(here.offset(2, 0, 2));
+			check(shelf != null, "The bookshelf isn't there");
+			((NonNullList<ItemStack>) field(shelf, ChiseledBookShelfBlockEntity.class, "items")).set(0, new ItemStack(Items.IRON_INGOT, count));
+		});
 	}
 
 	/** Places a block this far east and south of where the player started, on the singleplayer server. */

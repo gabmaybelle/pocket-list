@@ -4,11 +4,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.Inventory;
@@ -16,10 +17,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ResultSlot;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.component.ItemContainerContents;
 
 /** Counts what you have towards each line of the active list. */
 public final class Counter {
@@ -77,8 +78,7 @@ public final class Counter {
 	/** A short "all gathered" moment, once, when the last line is ticked off. */
 	private static void celebrate(Minecraft mc, Lists.PocketListData list) {
 		mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.4F, 0.6F));
-		SystemToast.addOrUpdate(mc.getToasts(), PocketList.FINISHED,
-				Component.translatable("pocket_list.finished.title"),
+		PocketList.toast(mc, PocketList.FINISHED_MILLIS, Component.translatable("pocket_list.finished.title"),
 				Component.translatable("pocket_list.finished.text", list.name));
 	}
 
@@ -91,13 +91,20 @@ public final class Counter {
 		if (depth >= MAX_DEPTH) {
 			return;
 		}
-		ItemContainerContents container = stack.get(DataComponents.CONTAINER);
-		if (container != null) {
-			container.nonEmptyStream().forEach(inner -> add(inner, into, depth + 1));
+		// 1.20.1 keeps what's inside in the item's NBT: a shulker box (or any block item carrying
+		// its block's contents) under BlockEntityTag.Items, a bundle under Items.
+		CompoundTag blockEntity = BlockItem.getBlockEntityData(stack);
+		if (blockEntity != null) {
+			addAll(blockEntity.getList("Items", Tag.TAG_COMPOUND), into, depth);
 		}
-		BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
-		if (bundle != null) {
-			bundle.itemCopyStream().forEach(inner -> add(inner, into, depth + 1));
+		if (stack.getItem() instanceof BundleItem && stack.getTag() != null) {
+			addAll(stack.getTag().getList("Items", Tag.TAG_COMPOUND), into, depth);
+		}
+	}
+
+	private static void addAll(ListTag items, Map<Item, Integer> into, int depth) {
+		for (int i = 0; i < items.size(); i++) {
+			add(ItemStack.of(items.getCompound(i)), into, depth + 1);
 		}
 	}
 }

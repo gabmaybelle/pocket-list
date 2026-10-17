@@ -34,8 +34,10 @@ import net.minecraft.client.gui.screens.recipebook.RecipeButton;
 import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
@@ -43,8 +45,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.level.block.entity.ChiseledBookShelfBlockEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -54,6 +56,9 @@ import net.minecraft.world.phys.Vec3;
  * screenshots land in build/run/clientGameTest/screenshots.
  */
 public class PocketListClientTest implements ClientGameTest {
+	/** The bookshelf standing in for a modded storage block, found again after rejoining. */
+	private static BlockPos shelf;
+
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
 		if (ScreenshotTour.enabled()) {
@@ -72,7 +77,7 @@ public class PocketListClientTest implements ClientGameTest {
 			}
 			save = world.getWorldSave();
 		}
-		// Back into the same world: the chests opened earlier, and the pot, are still remembered.
+		// Back into the same world: the chests opened earlier, and the bookshelf, are still remembered.
 		try (TestSingleplayerContext world = save.open()) {
 			try {
 				playAgain(ctx, world);
@@ -112,9 +117,12 @@ public class PocketListClientTest implements ClientGameTest {
 			Lists.data().lists.clear();
 			Lists.add(Entry.ofItem(Items.IRON_INGOT, 5));
 		});
+		// The shelf's contents reach the game again with its chunk (here, from the test): it's still
+		// remembered as a block to read, without using it again.
+		shelfHolds(ctx, shelf, 3);
 		recount(ctx);
 		expectHave(ctx, "minecraft:iron_ingot", 7);
-		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.WELCOME)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.TOAST)) == null,
 				"the welcome toast only shows once");
 		if (FabricLoader.getInstance().isModLoaded("jei") || FabricLoader.getInstance().isModLoaded("roughlyenoughitems")) {
 			recipeViewer(ctx, world.getServer());
@@ -199,7 +207,10 @@ public class PocketListClientTest implements ClientGameTest {
 	private static void welcome(ClientGameTestContext ctx) {
 		ctx.waitTicks(5);
 		check(ctx.computeOnClient(mc -> Lists.data().welcomed), "the welcome toast is marked as shown");
-		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.WELCOME)) != null,
+		// The first list is made while the game starts, before its language files are read.
+		String firstName = ctx.computeOnClient(mc -> Lists.active().name);
+		check(firstName.equals("List 1"), "a new player's first list is called List 1 (it's called " + firstName + ")");
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.TOAST)) != null,
 				"the welcome toast is showing on first join");
 		ctx.takeScreenshot("pocket_list_welcome");
 	}
@@ -280,7 +291,7 @@ public class PocketListClientTest implements ClientGameTest {
 		ctx.waitTicks(3);
 		List<FoundRecipe> recipes = ctx.computeOnClient(mc -> Recipes.forItem(mc, Items.IRON_INGOT));
 		check(recipes.size() >= 2, "iron ingots have several recipes");
-		FoundRecipe first = recipes.getFirst();
+		FoundRecipe first = recipes.get(0);
 		check(!(first.makes() == 9 && first.ingredients().size() == 1), "unpacking an iron block isn't offered first");
 		int[] firstRow = ctx.computeOnClient(mc -> mc.screen.children().stream()
 				.filter(c -> c.getClass().getSimpleName().equals("RecipeRow")).map(c -> (AbstractWidget) c)
@@ -313,17 +324,17 @@ public class PocketListClientTest implements ClientGameTest {
 			Lists.add(Entry.ofItem(Items.DIAMOND, 2));
 		});
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.TOAST)) == null,
 				"no celebration before it's done");
 		give(ctx, server, Items.DIAMOND, 2);
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) != null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.TOAST)) != null,
 				"a toast when the last line is gathered");
 		ctx.takeScreenshot("pocket_list_finished");
 		recount(ctx);
 		ctx.runOnClient(mc -> mc.getToasts().clear());
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.TOAST)) == null,
 				"the celebration happens once, not on every count");
 	}
 
@@ -367,7 +378,7 @@ public class PocketListClientTest implements ClientGameTest {
 		ctx.waitTick();
 		check(needs(ctx).equals(before), "typing z in the recipe viewer's search doesn't pin anything");
 
-		check(!ctx.computeOnClient(mc -> Viewers.all().getFirst().recipesFor(Items.LANTERN)).isEmpty(),
+		check(!ctx.computeOnClient(mc -> Viewers.all().get(0).recipesFor(Items.LANTERN)).isEmpty(),
 				"the recipe viewer knows how to make a lantern");
 		close(ctx);
 	}
@@ -388,10 +399,10 @@ public class PocketListClientTest implements ClientGameTest {
 		give(ctx, server, Items.OAK_LOG, 6);
 		give(ctx, server, Items.SPRUCE_LOG, 6);
 		give(ctx, server, Items.STICK, 3);
-		// Bundles are an experiment on 1.21.1 that this world doesn't have, so the torches come in a
-		// shulker box; a bundle is checked on its own below.
-		server.runCommand("give @a orange_shulker_box[container=[{slot:0,item:{id:\"minecraft:torch\",count:10}}]]");
-		server.runCommand("give @a white_shulker_box[container=[{slot:0,item:{id:\"minecraft:cobblestone\",count:64}}]]");
+		// Bundles are an experiment on 1.20.1 that this world doesn't have, so the torches come in a
+		// shulker box; a bundle is checked on its own below. 1.20.1 keeps what's inside in the NBT.
+		server.runCommand("give @a orange_shulker_box{BlockEntityTag:{Items:[{Slot:0b,id:\"minecraft:torch\",Count:10b}]}}");
+		server.runCommand("give @a white_shulker_box{BlockEntityTag:{Items:[{Slot:0b,id:\"minecraft:cobblestone\",Count:64b}]}}");
 		// On a slow computer the items take a few ticks to reach the player's game.
 		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.ORANGE_SHULKER_BOX) >= 1 && mc.player.getInventory().countItem(Items.WHITE_SHULKER_BOX) >= 1);
 		recount(ctx);
@@ -402,10 +413,17 @@ public class PocketListClientTest implements ClientGameTest {
 		expectHave(ctx, "minecraft:iron_ingot", 0);
 		// What's in a bundle counts too, and a bundle in a shulker box.
 		int inBundles = ctx.computeOnClient(mc -> {
+			// A bundle's NBT as the game writes it: {Items:[{id:"minecraft:torch",Count:7b}]}.
 			ItemStack bundle = new ItemStack(Items.BUNDLE);
-			bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(Items.TORCH, 7))));
+			ListTag inBundle = new ListTag();
+			inBundle.add(new ItemStack(Items.TORCH, 7).save(new CompoundTag()));
+			bundle.getOrCreateTag().put("Items", inBundle);
 			ItemStack box = new ItemStack(Items.WHITE_SHULKER_BOX);
-			box.set(DataComponents.CONTAINER, net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(bundle.copy())));
+			ListTag inBox = new ListTag();
+			CompoundTag slot = bundle.copy().save(new CompoundTag());
+			slot.putByte("Slot", (byte) 0);
+			inBox.add(slot);
+			box.getOrCreateTagElement("BlockEntityTag").put("Items", inBox);
 			Map<Item, Integer> totals = new HashMap<>();
 			Counter.add(bundle, totals, 0);
 			Counter.add(box, totals, 0);
@@ -421,8 +439,8 @@ public class PocketListClientTest implements ClientGameTest {
 		BlockPos right = here.offset(3, 0, 0);
 		BlockPos ender = here.offset(4, 0, 0);
 		// A double chest facing north: the left half connects east, to the right half.
-		server.runCommand(setblock(left, "chest[facing=north,type=left]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",count:3}]}"));
-		server.runCommand(setblock(right, "chest[facing=north,type=right]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",count:1}]}"));
+		server.runCommand(setblock(left, "chest[facing=north,type=left]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",Count:3b}]}"));
+		server.runCommand(setblock(right, "chest[facing=north,type=right]{Items:[{Slot:0b,id:\"minecraft:iron_ingot\",Count:1b}]}"));
 		server.runCommand(setblock(ender, "ender_chest[facing=north]"));
 		server.runCommand("item replace entity @a enderchest.0 with iron_ingot 1");
 		world(ctx);
@@ -436,31 +454,32 @@ public class PocketListClientTest implements ClientGameTest {
 		openAndClose(ctx, ender, ContainerScreen.class);
 		expectHave(ctx, "minecraft:iron_ingot", 4);
 
-		// A decorated pot holds things without opening a screen, and the game tells every player what's
-		// in it when its chunk loads (or a command changes it). Using it with an empty hand only
-		// wobbles it; it's remembered through its item storage (the same way a modded jar would be).
-		BlockPos pot = here.offset(2, 0, 2);
-		String at = pot.getX() + " " + pot.getY() + " " + pot.getZ();
-		server.runCommand(setblock(pot, "decorated_pot{item:{id:\"minecraft:iron_ingot\",count:2}}"));
+		// A block that holds things without opening a screen, and whose contents the game tells every
+		// player (a modded jar or canister), is remembered through its item storage once used. 1.20.1
+		// has no such block of its own (decorated pots only hold items in later versions), so this stands in
+		// for one: a chiseled bookshelf has item storage, and the test puts two iron ingots into the
+		// player's own copy of it, as such a mod's update would. Using it on top opens nothing.
+		shelf = here.offset(2, 0, 2);
+		server.runCommand(setblock(shelf, "chiseled_bookshelf[facing=north]"));
 		server.runCommand("item replace entity @a hotbar.8 with air");
 		ctx.runOnClient(mc -> mc.player.getInventory().selected = 8);
 		world(ctx);
+		shelfHolds(ctx, shelf, 2);
 		recount(ctx);
-		// Not used yet: nothing from the pot counts.
+		// Not used yet: nothing from the shelf counts.
 		expectHave(ctx, "minecraft:iron_ingot", 4);
-		useBlock(ctx, pot);
+		useBlock(ctx, shelf);
 		ctx.waitTicks(ChestMemory.STORAGE_WAIT + 5);
-		check(ctx.computeOnClient(mc -> mc.screen) == null, "a decorated pot opens no screen");
+		check(ctx.computeOnClient(mc -> mc.screen) == null, "using a bookshelf on top opens no screen");
 		recount(ctx);
-		// Four in the chests and two in the pot.
+		// Four in the chests and two on the shelf.
 		expectHave(ctx, "minecraft:iron_ingot", 6);
 		ctx.runOnClient(mc -> Lists.data().countChests = false);
 		recount(ctx);
 		expectHave(ctx, "minecraft:iron_ingot", 0);
 		ctx.runOnClient(mc -> Lists.data().countChests = true);
-		// When the game is told the pot changed, the count follows without using it again.
-		server.runCommand("data merge block " + at + " {item:{id:\"minecraft:iron_ingot\",count:3}}");
-		world(ctx);
+		// When the game hears the shelf changed, the count follows without using it again.
+		shelfHolds(ctx, shelf, 3);
 		recount(ctx);
 		expectHave(ctx, "minecraft:iron_ingot", 7);
 		ctx.runOnClient(mc -> mc.player.getInventory().selected = 0);
@@ -508,11 +527,11 @@ public class PocketListClientTest implements ClientGameTest {
 	private static void pinRecipe(ClientGameTestContext ctx) {
 		openInventory(ctx, true);
 		// The first recipe on the page, and what pinning it should add.
-		RecipeButton button = ctx.computeOnClient(mc -> visibleRecipeButtons(mc).getFirst());
+		RecipeButton button = ctx.computeOnClient(mc -> visibleRecipeButtons(mc).get(0));
 		Map<String, Integer> expected = ctx.computeOnClient(mc -> {
-			RecipeHolder<?> recipe = button.getRecipe();
+			Recipe<?> recipe = button.getRecipe();
 			Map<String, Integer> out = new HashMap<>();
-			for (Entry e : Pins.ingredients(recipe.value())) {
+			for (Entry e : Pins.ingredients(recipe)) {
 				out.put(e.key(), e.need);
 			}
 			return out;
@@ -576,10 +595,10 @@ public class PocketListClientTest implements ClientGameTest {
 		click(ctx, at[0], at[1]);
 		check(ctx.computeOnClient(mc -> Lists.active().entries.size()) == 1, "clicking a result adds it");
 		ctx.clickScreenButton("+");
-		check(ctx.computeOnClient(mc -> Lists.active().entries.getFirst().need) == 2, "+ adds one");
+		check(ctx.computeOnClient(mc -> Lists.active().entries.get(0).need) == 2, "+ adds one");
 		ctx.clickScreenButton("-");
 		ctx.clickScreenButton("-");
-		check(ctx.computeOnClient(mc -> Lists.active().entries.getFirst().need) == 1, "- stops at one");
+		check(ctx.computeOnClient(mc -> Lists.active().entries.get(0).need) == 1, "- stops at one");
 		ctx.takeScreenshot("pocket_list_added");
 
 		ctx.clickScreenButton("Delete List");
@@ -589,7 +608,7 @@ public class PocketListClientTest implements ClientGameTest {
 		check(ctx.computeOnClient(mc -> Lists.active().name).equals("Cottage"), "back on the first list");
 
 		// The open key closes it again (the search box isn't focused after a rebuild by a button).
-		ctx.runOnClient(mc -> mc.screen.clearFocus());
+		ctx.runOnClient(mc -> mc.screen.setFocused(null));
 		ctx.getInput().pressKey(PocketList.openKey);
 		ctx.waitFor(mc -> mc.screen == null);
 	}
@@ -669,6 +688,16 @@ public class PocketListClientTest implements ClientGameTest {
 
 	private static String setblock(BlockPos pos, String block) {
 		return "setblock " + pos.getX() + " " + pos.getY() + " " + pos.getZ() + " " + block;
+	}
+
+	/** Puts this many iron ingots in the first slot of the player's own copy of a chiseled bookshelf. */
+	@SuppressWarnings("unchecked")
+	private static void shelfHolds(ClientGameTestContext ctx, BlockPos shelf, int count) {
+		ctx.runOnClient(mc -> {
+			ChiseledBookShelfBlockEntity be = (ChiseledBookShelfBlockEntity) mc.level.getBlockEntity(shelf);
+			check(be != null, "the bookshelf is there");
+			((NonNullList<ItemStack>) field(be, ChiseledBookShelfBlockEntity.class, "items")).set(0, new ItemStack(Items.IRON_INGOT, count));
+		});
 	}
 
 	/** Right-clicks a block with whatever is in the main hand. */
