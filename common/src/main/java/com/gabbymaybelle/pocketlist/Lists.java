@@ -75,12 +75,24 @@ public final class Lists {
 			data.lists.add(newList(1));
 		}
 		data.active = Math.floorMod(data.active, data.lists.size());
-		return data.lists.get(data.active);
+		PocketListData list = data.lists.get(data.active);
+		if (DEFAULT_NAME.equals(list.name)) {
+			// Named while the game was still starting, before its language files were read, so the
+			// name came out as the bare key. Named properly as soon as they're there.
+			String named = Component.translatable(DEFAULT_NAME, data.active + 1).getString();
+			if (!named.equals(DEFAULT_NAME)) {
+				list.name = named;
+			}
+		}
+		return list;
 	}
+
+	/** The translation key of a new list's name ("List 1"). */
+	private static final String DEFAULT_NAME = "pocket_list.default_name";
 
 	public static PocketListData newList(int number) {
 		PocketListData list = new PocketListData();
-		list.name = Component.translatable("pocket_list.default_name", number).getString();
+		list.name = Component.translatable(DEFAULT_NAME, number).getString();
 		return list;
 	}
 

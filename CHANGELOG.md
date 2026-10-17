@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A brand-new player's first list is called "List 1", not `pocket_list.default_name`. A list already saved with that name gets its proper name the next time you use it.
+
 ## 0.2.0
 
 - Pocket List now comes as a NeoForge mod as well as a Fabric one, for Minecraft 26.2 and 26.3. It looks and works the same. On NeoForge, the settings are on the Mods screen's Config button. The Fabric file is now named `pocket-list-fabric-0.2.0.jar`.

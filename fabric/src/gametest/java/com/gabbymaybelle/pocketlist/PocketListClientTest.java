@@ -198,6 +198,9 @@ public class PocketListClientTest implements FabricClientGameTest {
 	private static void welcome(ClientGameTestContext ctx) {
 		ctx.waitTicks(5);
 		check(ctx.computeOnClient(mc -> Lists.data().welcomed), "the welcome toast is marked as shown");
+		// The first list is made while the game starts, before its language files are read.
+		String firstName = ctx.computeOnClient(mc -> Lists.active().name);
+		check(firstName.equals("List 1"), "a new player's first list is called List 1 (it's called " + firstName + ")");
 		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.WELCOME)) != null,
 				"the welcome toast is showing on first join");
 		ctx.takeScreenshot("pocket_list_welcome");

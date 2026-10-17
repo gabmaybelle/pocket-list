@@ -41,6 +41,15 @@ neoForge {
 	}
 }
 
+// Every test run starts as a new player would: no saved lists (the welcome note shows), no
+// remembered chests. The run folder is kept between runs otherwise.
+def clientTestConfig = file('build/run/clientTest/config')
+tasks.matching { it.name == 'runClientTest' }.configureEach {
+	doFirst {
+		delete new File(clientTestConfig, 'pocket_list.json'), new File(clientTestConfig, 'pocket_list.json.broken'), new File(clientTestConfig, 'pocket_list')
+	}
+}
+
 dependencies {
 	// Recipe viewers: compiled against their APIs only; not bundled or required.
 	compileOnly "maven.modrinth:jei:csqmrfNS"

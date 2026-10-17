@@ -66,6 +66,8 @@ final class PocketListClientTest {
 		});
 		createWorld("pocket_list-clienttest");
 		command("gamemode survival @a");
+		// The first list is made while the game starts, before its language files are read.
+		run(mc -> check(Lists.active().name.equals("List 1"), "A new player's first list isn't called List 1: " + Lists.active().name));
 
 		counting();
 		chestMemory();
