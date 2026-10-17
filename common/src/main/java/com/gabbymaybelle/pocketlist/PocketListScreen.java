@@ -1,5 +1,8 @@
 package com.gabbymaybelle.pocketlist;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -20,7 +23,8 @@ import net.minecraft.world.item.Items;
 
 /**
  * Where you look after your lists: switch between them, rename them, type amounts, add items
- * by name, break a line down into its ingredients, and clear off what you've gathered.
+ * by name, break a line down into its ingredients, clear off what you've gathered, and paste
+ * a list in (or one from Litematica) or copy one out.
  */
 public class PocketListScreen extends Screen {
 	private static final int MAX_PANEL = 320;
@@ -85,7 +89,7 @@ public class PocketListScreen extends Screen {
 		}).bounds(right - 60, 24, 60, 20).build());
 
 		// The lines, a page at a time.
-		int bottomBlock = 24 + 22 + 24 + 28;
+		int bottomBlock = 24 + 22 + 24 + 28 + 36;
 		rowsPerPage = Math.max(2, (height - TOP - bottomBlock) / ROW);
 		int pages = pages(list);
 		page = Math.clamp(page, 0, pages - 1);
@@ -136,6 +140,20 @@ public class PocketListScreen extends Screen {
 				changed();
 			}, Component.translatable("pocket_list.screen.add_item", new ItemStack(item).getHoverName())));
 			resultX += 20;
+		}
+
+		// Lists as text: paste one in, copy this one out, or bring in Litematica's material list.
+		int tools = height - 50;
+		boolean litematica = Platform.isModLoaded("litematica") || ListText.latestLitematicaList() != null;
+		int toolWidth = litematica ? (panel - 8) / 3 : (panel - 4) / 2;
+		addRenderableWidget(Button.builder(Component.translatable("pocket_list.screen.paste"), b -> pasteList(minecraft.keyboardHandler.getClipboard(), null))
+				.bounds(left, tools, toolWidth, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.paste.tooltip"))).build());
+		addRenderableWidget(Button.builder(Component.translatable("pocket_list.screen.copy"), b -> copyList())
+				.bounds(left + toolWidth + 4, tools, toolWidth, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.copy.tooltip"))).build())
+				.active = !list.entries.isEmpty();
+		if (litematica) {
+			addRenderableWidget(Button.builder(Component.translatable("pocket_list.screen.import"), b -> importLitematica())
+					.bounds(left + (toolWidth + 4) * 2, tools, toolWidth, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.import.tooltip"))).build());
 		}
 
 		// Housekeeping.
@@ -235,6 +253,54 @@ public class PocketListScreen extends Screen {
 			changed();
 		} else {
 			minecraft.setScreen(new RecipeChooserScreen(this, entry, recipes));
+		}
+	}
+
+	/**
+	 * Makes a new list from text: one item per line with how many, or a Litematica material list.
+	 * Lines whose item isn't found are named in the message, never guessed at.
+	 */
+	void pasteList(String text, String fallbackName) {
+		if (text == null || text.isBlank()) {
+			showMessage(Component.translatable("pocket_list.screen.paste_nothing"));
+			rebuildWidgets();
+			return;
+		}
+		ListText.Result result = ListText.read(text, minecraft.level == null ? null : minecraft.level.enabledFeatures());
+		String unknown = String.join(", ", result.unknown().stream().limit(3).toList()) + (result.unknown().size() > 3 ? ", ..." : "");
+		if (!result.unknown().isEmpty()) {
+			PocketList.LOGGER.info("Pocket List: no item found for {}", result.unknown());
+		}
+		if (result.entries().isEmpty()) {
+			showMessage(result.unknown().isEmpty() ? Component.translatable("pocket_list.screen.paste_nothing")
+					: Component.translatable("pocket_list.screen.paste_none_known", unknown));
+			rebuildWidgets();
+			return;
+		}
+		Lists.PocketListData list = Lists.addList(result.title() != null ? result.title() : fallbackName, result.entries());
+		page = 0;
+		showMessage(result.unknown().isEmpty() ? Component.translatable("pocket_list.screen.pasted", list.entries.size())
+				: Component.translatable("pocket_list.screen.pasted_unknown", list.entries.size(), unknown));
+		changed();
+	}
+
+	private void copyList() {
+		Lists.PocketListData list = Lists.active();
+		minecraft.keyboardHandler.setClipboard(ListText.write(list));
+		showMessage(Component.translatable("pocket_list.screen.copied", list.entries.size()));
+	}
+
+	private void importLitematica() {
+		Path file = ListText.latestLitematicaList();
+		if (file == null) {
+			showMessage(Component.translatable("pocket_list.screen.import.none"));
+			return;
+		}
+		try {
+			pasteList(Files.readString(file), Component.translatable("pocket_list.screen.litematica_name").getString());
+		} catch (IOException | RuntimeException e) {
+			PocketList.LOGGER.warn("Pocket List: couldn't read {}", file, e);
+			showMessage(Component.translatable("pocket_list.screen.import.none"));
 		}
 	}
 
@@ -352,7 +418,13 @@ public class PocketListScreen extends Screen {
 			graphics.drawString(font, Component.translatable("pocket_list.screen.no_results"), left, searchBox.getY() + 28, MUTED, true);
 		}
 		if (message != null && messageUntil > Util.getMillis()) {
-			graphics.drawCenteredString(font, message, width / 2, height - 38, 0xFFFFDD77);
+			// Wrapped, upwards from just above the Paste row.
+			List<FormattedCharSequence> lines = font.split(message, panel);
+			int y = height - 62 - (lines.size() - 1) * font.lineHeight;
+			for (FormattedCharSequence line : lines) {
+				graphics.drawCenteredString(font, line, width / 2, y, 0xFFFFDD77);
+				y += font.lineHeight;
+			}
 		}
 	}
 

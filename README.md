@@ -37,7 +37,16 @@ Press **K** to open your lists. From there you can:
 - search for an item by name and add it, with the amount box beside the search setting how many;
 - break a line down into its ingredients;
 - clear off everything you have enough of (Clear Done);
+- paste a list in, or copy this one out (see below);
 - open the settings.
+
+## Lists as text
+
+**Paste List** makes a new list from text you've copied, one item per line with how many: "64 oak planks", "Torches x16", "minecraft:glass_pane 8" or "#minecraft:logs 10" for any log. A list from your notes, a guide or a video description works as it is. Lines that aren't an item are named in a message, never guessed.
+
+**Copy List** copies the list as text, one line per item, to keep in your notes or send to a friend for their own Pocket List.
+
+**From Litematica** (shown when Litematica is installed): in Litematica, open a schematic's material list and press Write to file, then click From Litematica. Pocket List makes a new list named after the schematic, with each item's total, and counts your inventory and chests against it as usual. Break down still works on every line.
 
 ## Settings
 
