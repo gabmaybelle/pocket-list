@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1+1.21.1
 
 - A brand-new player's first list is called "List 1", not `pocket_list.default_name`. A list already saved with that name gets its proper name the next time you use it.
 
