@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A brand-new player's first list is called "List 1", not `pocket_list.default_name`. A list already saved with that name gets its proper name the next time you use it.
+
 ## 0.2.0+1.21.1
 
 Pocket List for Minecraft 1.21.1, on Fabric and NeoForge: the same mod as 0.2.0 for 26.x, with the HUD checklist, the list and settings screens, pinning with Z from inventories, the recipe book, JEI and REI, Break down, and chest memory. What's different on 1.21.1, all down to the game itself:
