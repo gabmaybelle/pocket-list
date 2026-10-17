@@ -96,11 +96,21 @@ public final class PocketList {
 	 * unused, so nothing of the game's replaces Pocket List's note, and the time is stretched here.
 	 */
 	static void toast(Minecraft mc, long millis, Component title, Component text) {
-		mc.getToasts().addToast(new SystemToast(TOAST, title, text) {
-			@Override
-			public Toast.Visibility render(GuiGraphics graphics, ToastComponent toasts, long shownFor) {
-				return super.render(graphics, toasts, shownFor * 5000L / millis);
-			}
-		});
+		mc.getToasts().addToast(new Note(title, text, millis));
+	}
+
+	/** A game note that stays up for its own time rather than the kind's fixed one. */
+	private static final class Note extends SystemToast {
+		private final long millis;
+
+		Note(Component title, Component text, long millis) {
+			super(TOAST, title, text);
+			this.millis = millis;
+		}
+
+		@Override
+		public Toast.Visibility render(GuiGraphics graphics, ToastComponent toasts, long shownFor) {
+			return super.render(graphics, toasts, shownFor * 5000L / millis);
+		}
 	}
 }
