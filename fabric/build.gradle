@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'fabric-loom' version "${loom_version}"
 }
 
 repositories {
@@ -14,6 +14,10 @@ sourceSets.main {
 }
 
 loom {
+	// Named for this mod: the default, fabric-refmap.json, would clash with any other mod built the same way.
+	mixin {
+		defaultRefmapName = "pocket_list-refmap.json"
+	}
 	mods {
 		"pocket_list" {
 			sourceSet sourceSets.main
@@ -24,26 +28,29 @@ loom {
 dependencies {
 	// Versions are in gradle.properties.
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// 1.21.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 	// Mod Menu: only for the Config button; not bundled or required.
-	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	compileOnly "maven.modrinth:jei:csqmrfNS"
-	compileOnly "maven.modrinth:rei:rKsAE6bX"
-	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
-	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	// (Modrinth version ids, Fabric builds: JEI 19.27.0.346, REI 16.0.799, Cloth Config 15.0.140, Architectury 13.0.11.)
+	modCompileOnly "maven.modrinth:jei:GiaHNQuZ"
+	modCompileOnly "maven.modrinth:rei:aWzTESNC"
+	modCompileOnly "maven.modrinth:cloth-config:HpMb5wGb"
+	modCompileOnly "maven.modrinth:architectury-api:Pzc2FP5K"
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 
-	// `./gradlew :fabric:runClientGameTest -PtestViewer=jei` (or rei) runs the game tests with that viewer installed.
-	// On 26.2 (`-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`) JEI is 30.29.0.201
-	// (Modrinth id d3HeviSL); REI is only tested on 26.3.
+	// `./gradlew :fabric:runClientGameTest -PtestViewer=jei` (or rei) runs the game test with that viewer installed.
 	if (project.findProperty("testViewer") == "jei") {
-		runtimeOnly project.minecraft_version == "26.2" ? "maven.modrinth:jei:d3HeviSL" : "maven.modrinth:jei:csqmrfNS"
+		modLocalRuntime "maven.modrinth:jei:GiaHNQuZ"
 	} else if (project.findProperty("testViewer") == "rei") {
-		runtimeOnly "maven.modrinth:rei:rKsAE6bX"
-		runtimeOnly "maven.modrinth:cloth-config:fg2uyxOW"
-		runtimeOnly "maven.modrinth:architectury-api:1pMaB6So"
+		modLocalRuntime "maven.modrinth:rei:aWzTESNC"
+		modLocalRuntime "maven.modrinth:cloth-config:HpMb5wGb"
+		modLocalRuntime "maven.modrinth:architectury-api:Pzc2FP5K"
+		// Carried inside REI's jar, which a dev run doesn't unpack.
+		localRuntime "me.shedaniel.cloth:basic-math:0.6.1"
 	}
 }
 
@@ -57,17 +64,47 @@ processResources {
 }
 
 // Client game tests: `./gradlew :fabric:runClientGameTest` starts a real game, creates a test
-// world and drives it (keys, clicks, screenshots) from src/gametest. Nothing here ships in the jar.
-fabricApi {
-	configureTests {
-		createSourceSet = true
-		modId = "pocket_list_gametest"
-		enableGameTests = false
-		enableClientGameTests = true
-		eula = true
+// world and drives it (keys, clicks, screenshots) from src/gametest. Nothing there ships in the
+// jar. Fabric's client game test API doesn't exist for 1.21.1, so the harness is the test's own
+// (src/gametest/.../harness) and the run is a plain client run with the test source set as a
+// second mod.
+sourceSets {
+	gametest {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
+loom {
+	mods {
+		"pocket_list_gametest" {
+			sourceSet sourceSets.gametest
+		}
+	}
+	runs {
+		clientGameTest {
+			client()
+			name = "Client Game Test"
+			source sourceSets.gametest
+			runDir "build/run/clientGameTest"
+			property "pocket_list.gametest", "true"
+			programArgs "--width", "854", "--height", "480"
+			ideConfigGenerated false
+		}
+	}
+}
+
+// Every run starts as a new player would: no saved lists (the welcome note shows), no remembered
+// chests. Fabric's own client game test does this on 26.x; here the run folder is kept between runs.
+def gameTestConfig = file('build/run/clientGameTest/config')
+tasks.matching { it.name == 'runClientGameTest' }.configureEach {
+	doFirst {
+		delete new File(gameTestConfig, 'pocket_list.json'), new File(gameTestConfig, 'pocket_list.json.broken'), new File(gameTestConfig, 'pocket_list')
 	}
 }
 
 // pocket-list-fabric-<version>.jar, the name players download.
 tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }
+tasks.named('remapJar') { archiveBaseName = "${rootProject.name}-fabric" }
+tasks.named('remapSourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }

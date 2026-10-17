@@ -3,19 +3,17 @@ package com.gabbymaybelle.pocketlist;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -159,7 +157,7 @@ public class PocketListScreen extends Screen {
 		}).bounds(left + quarter + 4, bottom, quarter, 20).build());
 		addRenderableWidget(Button.builder(Component.translatable("pocket_list.screen.settings"), b -> {
 			Lists.save();
-			minecraft.gui.setScreen(new PocketListSettingsScreen(this));
+			minecraft.setScreen(new PocketListSettingsScreen(this));
 		}).bounds(left + (quarter + 4) * 2, bottom, quarter, 20).tooltip(Tooltip.create(Component.translatable("pocket_list.screen.settings.tooltip"))).build());
 		addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
 				.bounds(left + (quarter + 4) * 3, bottom, quarter, 20).build());
@@ -183,11 +181,11 @@ public class PocketListScreen extends Screen {
 		addRenderableWidget(new ItemButton(right - 88, y + 1, new ItemStack(Items.CRAFTING_TABLE), shift -> breakDown(entry),
 				Component.translatable(entry.done() ? "pocket_list.screen.break_down.done" : "pocket_list.screen.break_down")));
 		addRenderableWidget(Button.builder(Component.literal("-"), b -> {
-			entry.need = Math.max(1, entry.need - (minecraft.hasShiftDown() ? entry.stackSize() : 1));
+			entry.need = Math.max(1, entry.need - (hasShiftDown() ? entry.stackSize() : 1));
 			changed();
 		}).bounds(right - 66, y, 20, 20).tooltip(Tooltip.create(step)).build());
 		addRenderableWidget(Button.builder(Component.literal("+"), b -> {
-			entry.need = Math.min(Lists.MAX_NEED, entry.need + (minecraft.hasShiftDown() ? entry.stackSize() : 1));
+			entry.need = Math.min(Lists.MAX_NEED, entry.need + (hasShiftDown() ? entry.stackSize() : 1));
 			changed();
 		}).bounds(right - 44, y, 20, 20).tooltip(Tooltip.create(step)).build());
 		addRenderableWidget(Button.builder(Component.literal("x"), b -> {
@@ -236,7 +234,7 @@ public class PocketListScreen extends Screen {
 			Lists.breakDown(entry, recipes.getFirst());
 			changed();
 		} else {
-			minecraft.gui.setScreen(new RecipeChooserScreen(this, entry, recipes));
+			minecraft.setScreen(new RecipeChooserScreen(this, entry, recipes));
 		}
 	}
 
@@ -312,19 +310,17 @@ public class PocketListScreen extends Screen {
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-		super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-		graphics.centeredText(font, title, width / 2, 10, TEXT);
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		super.render(graphics, mouseX, mouseY, partialTick);
+		graphics.drawCenteredString(font, title, width / 2, 10, TEXT);
 		Lists.PocketListData list = Lists.active();
 		int left = (width - panel) / 2;
 		int right = left + panel;
 		if (list.entries.isEmpty()) {
-			// Wrapped line by line: textWithWordWrap returns a value on 26.3 but not on 26.2, so one jar
-			// can't call it on both.
 			int y = TOP + 4;
 			for (FormattedCharSequence line : font.split(Component.translatable("pocket_list.screen.empty",
 					PocketList.pinKey.getTranslatedKeyMessage()), panel)) {
-				graphics.text(font, line, left, y, MUTED, true);
+				graphics.drawString(font, line, left, y, MUTED, true);
 				y += font.lineHeight;
 			}
 		}
@@ -337,26 +333,26 @@ public class PocketListScreen extends Screen {
 			int y = TOP + i * ROW;
 			int rowEnd = right - CONTROLS - 4;
 			graphics.fill(left, y, rowEnd, y + 20, ROW_BACKGROUND);
-			graphics.item(entry.icon(), left + 2, y + 2);
+			graphics.renderItem(entry.icon(), left + 2, y + 2);
 			Component have = Component.translatable("pocket_list.screen.have", Math.min(entry.have(), entry.need));
 			int haveWidth = font.width(have);
-			graphics.text(font, have, rowEnd - 4 - haveWidth, y + 6, entry.done() ? DONE : MUTED, true);
+			graphics.drawString(font, have, rowEnd - 4 - haveWidth, y + 6, entry.done() ? DONE : MUTED, true);
 			int nameWidth = rowEnd - 4 - haveWidth - 6 - (left + 22);
 			Component name = entry.name();
-			graphics.text(font, font.plainSubstrByWidth(name.getString(), nameWidth), left + 22, y + 6, entry.done() ? DONE : TEXT, true);
+			graphics.drawString(font, font.plainSubstrByWidth(name.getString(), nameWidth), left + 22, y + 6, entry.done() ? DONE : TEXT, true);
 			if (mouseX >= left && mouseX < rowEnd && mouseY >= y && mouseY < y + 20) {
-				graphics.setTooltipForNextFrame(font, name, mouseX, mouseY);
+				setTooltipForNextRenderPass(name);
 			}
 		}
 		int pages = pages(list);
 		if (pages > 1) {
-			graphics.centeredText(font, Component.translatable("pocket_list.screen.page", page + 1, pages), width / 2, TOP + rowsPerPage * ROW + 8, MUTED);
+			graphics.drawCenteredString(font, Component.translatable("pocket_list.screen.page", page + 1, pages), width / 2, TOP + rowsPerPage * ROW + 8, MUTED);
 		}
 		if (!search.isBlank() && searchResults().isEmpty()) {
-			graphics.text(font, Component.translatable("pocket_list.screen.no_results"), left, searchBox.getY() + 28, MUTED, true);
+			graphics.drawString(font, Component.translatable("pocket_list.screen.no_results"), left, searchBox.getY() + 28, MUTED, true);
 		}
 		if (message != null && messageUntil > Util.getMillis()) {
-			graphics.centeredText(font, message, width / 2, height - 38, 0xFFFFDD77);
+			graphics.drawCenteredString(font, message, width / 2, height - 38, 0xFFFFDD77);
 		}
 	}
 
@@ -372,13 +368,13 @@ public class PocketListScreen extends Screen {
 	}
 
 	@Override
-	public boolean keyPressed(KeyEvent event) {
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		// The open key closes it again, unless you're typing.
-		if (PocketList.openKey.matches(event) && !Compat.typing(this)) {
+		if (PocketList.openKey.matches(keyCode, scanCode) && !Compat.typing(this)) {
 			onClose();
 			return true;
 		}
-		return super.keyPressed(event);
+		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
 	@Override
@@ -388,7 +384,7 @@ public class PocketListScreen extends Screen {
 
 	@Override
 	public void onClose() {
-		minecraft.gui.setScreen(parent);
+		minecraft.setScreen(parent);
 	}
 
 	@Override
@@ -426,14 +422,14 @@ public class PocketListScreen extends Screen {
 		}
 
 		@Override
-		protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+		protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 			graphics.fill(getX(), getY(), getX() + 18, getY() + 18, isHoveredOrFocused() ? 0x80FFFFFF : ROW_BACKGROUND);
-			graphics.item(stack, getX() + 1, getY() + 1);
+			graphics.renderItem(stack, getX() + 1, getY() + 1);
 		}
 
 		@Override
-		public void onClick(MouseButtonEvent event, boolean doubleClick) {
-			onClick.accept(event.hasShiftDown());
+		public void onClick(double mouseX, double mouseY) {
+			onClick.accept(Screen.hasShiftDown());
 		}
 
 		@Override

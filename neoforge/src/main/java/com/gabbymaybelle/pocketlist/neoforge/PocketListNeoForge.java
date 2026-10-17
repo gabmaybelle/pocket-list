@@ -27,8 +27,7 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.transfer.ResourceHandler;
-import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * NeoForge's way in: NeoForge's events, passed on to the shared code, and the settings button on
@@ -50,16 +49,15 @@ public class PocketListNeoForge {
 
 			@Override
 			public List<ItemStack> blockItems(Level level, BlockPos pos) {
-				ResourceHandler<ItemResource> handler = level.getCapability(Capabilities.Item.BLOCK, pos, null);
+				IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, null);
 				if (handler == null) {
 					return null;
 				}
 				List<ItemStack> stacks = new ArrayList<>();
-				for (int slot = 0; slot < handler.size(); slot++) {
-					ItemResource resource = handler.getResource(slot);
-					int amount = handler.getAmountAsInt(slot);
-					if (!resource.isEmpty() && amount > 0) {
-						stacks.add(resource.toStack(amount));
+				for (int slot = 0; slot < handler.getSlots(); slot++) {
+					ItemStack stack = handler.getStackInSlot(slot);
+					if (!stack.isEmpty()) {
+						stacks.add(stack.copy());
 					}
 				}
 				return stacks;
@@ -80,14 +78,13 @@ public class PocketListNeoForge {
 	}
 
 	private static void keys(RegisterKeyMappingsEvent event) {
-		event.registerCategory(PocketList.CATEGORY);
 		event.register(PocketList.OPEN_KEY);
 		event.register(PocketList.PIN_KEY);
 		event.register(PocketList.HUD_KEY);
 	}
 
 	private static void layers(RegisterGuiLayersEvent event) {
-		event.registerAboveAll(PocketHud.ID, PocketHud::extract);
+		event.registerAboveAll(PocketHud.ID, PocketHud::render);
 	}
 
 	private static void tick(ClientTickEvent.Post event) {
@@ -105,7 +102,7 @@ public class PocketListNeoForge {
 	}
 
 	private static void screenKey(ScreenEvent.KeyPressed.Pre event) {
-		if (PocketList.onScreenKey(Minecraft.getInstance(), event.getScreen(), event.getKeyEvent())) {
+		if (PocketList.onScreenKey(Minecraft.getInstance(), event.getScreen(), event.getKeyCode(), event.getScanCode(), event.getModifiers())) {
 			event.setCanceled(true);
 		}
 	}

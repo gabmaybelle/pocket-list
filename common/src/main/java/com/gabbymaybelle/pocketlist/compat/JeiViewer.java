@@ -3,6 +3,7 @@ package com.gabbymaybelle.pocketlist.compat;
 import com.gabbymaybelle.pocketlist.Entry;
 import com.gabbymaybelle.pocketlist.FoundRecipe;
 import com.gabbymaybelle.pocketlist.Recipes;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -70,7 +71,7 @@ final class JeiViewer implements RecipeViewer {
 
 	private static <T> void addFrom(IRecipeManager recipes, IRecipeCategory<T> category, IFocus<ItemStack> focus, IFocusGroup group,
 			Item item, List<FoundRecipe> out) {
-		ItemStack station = recipes.createCraftingStationLookup(category.getRecipeType()).getItemStack().findFirst().orElse(ItemStack.EMPTY);
+		ItemStack station = recipes.createRecipeCatalystLookup(category.getRecipeType()).getItemStack().findFirst().orElse(ItemStack.EMPTY);
 		recipes.createRecipeLookup(category.getRecipeType()).limitFocus(List.of(focus)).get().limit(MAX_PER_CATEGORY)
 				.forEach(recipe -> recipes.createRecipeLayoutDrawable(category, recipe, group).ifPresent(layout -> {
 					int makes = layout.getRecipeSlotsView().getSlotViews(RecipeIngredientRole.OUTPUT).stream()
@@ -91,6 +92,29 @@ final class JeiViewer implements RecipeViewer {
 				}));
 	}
 
+	/** A slot's item tag ("any planks"): newer JEI 19 builds can say; older ones only list the items. */
+	private static final Method GET_TAG_KEY = findTagKey();
+
+	private static Method findTagKey() {
+		try {
+			return IRecipeSlotView.class.getMethod("getTagKey");
+		} catch (NoSuchMethodException e) {
+			return null;
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Optional<TagKey<?>> tagKey(IRecipeSlotView slot) {
+		if (GET_TAG_KEY != null) {
+			try {
+				return (Optional<TagKey<?>>) GET_TAG_KEY.invoke(slot);
+			} catch (ReflectiveOperationException | RuntimeException e) {
+				// Shown as its items instead.
+			}
+		}
+		return Optional.empty();
+	}
+
 	@SuppressWarnings("unchecked")
 	private static Entry toEntry(IRecipeSlotView slot) {
 		List<ItemStack> stacks = slot.getItemStacks().filter(s -> !s.isEmpty()).toList();
@@ -98,7 +122,7 @@ final class JeiViewer implements RecipeViewer {
 			return null;
 		}
 		int count = stacks.getFirst().getCount();
-		Optional<TagKey<?>> tag = slot.getTagKey();
+		Optional<TagKey<?>> tag = tagKey(slot);
 		if (tag.isPresent() && tag.get().registry().equals(Registries.ITEM)) {
 			return Entry.ofTag((TagKey<Item>) tag.get(), count);
 		}

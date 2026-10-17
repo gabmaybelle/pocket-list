@@ -1,8 +1,10 @@
 # Pocket List
 
-A client-side Fabric and NeoForge mod for Minecraft 26.2 and 26.3, one jar per loader for both (mod ID `pocket_list`): a checklist of what you're
+A client-side Fabric and NeoForge mod (mod ID `pocket_list`): a checklist of what you're
 gathering, in a corner of the screen, that counts as you collect. See README.md for what
-players get.
+players get. **This is the `1.21.1` branch** (Minecraft 1.21.1, Java 21, versions `<v>+1.21.1`);
+`main` is Minecraft 26.2 and 26.3. A change that belongs on both is made on `main` first and
+ported here by hand.
 
 `PROGRESS.md` says what's done, what's broken and what's next, with a row per session: read
 it first, and add this session's row before ending.
@@ -16,7 +18,9 @@ it first, and add this session's row before ending.
   `ChestMemory` have plain handlers each loader's events call.
 - `fabric/`: `PocketListFabric` (Fabric API events, item storage through `ItemStorage.SIDED`),
   `ModMenuIntegration`, `fabric.mod.json`, and `src/gametest/` (the client game test,
-  `PocketListClientTest`, and `ScreenshotTour`).
+  `PocketListClientTest`, and `ScreenshotTour`). Fabric's client game test API doesn't exist for
+  1.21.1, so `src/gametest/.../harness` is a small stand-in with the same shape (world builder,
+  server commands, key presses, typing, mouse and window size through the game's own handlers).
 - `neoforge/`: `PocketListNeoForge` (NeoForge events, item storage through
   `Capabilities.Item.BLOCK`, the Mods screen's Config button) and `neoforge.mods.toml`. JEI finds
   `JeiPlugin` by its `@JeiPlugin` annotation there; on Fabric through the `jei_mod_plugin` entrypoint.
@@ -24,18 +28,20 @@ it first, and add this session's row before ending.
 ## Build and test
 
 - `./gradlew build`: jars in `fabric/build/libs/` and `neoforge/build/libs/`.
-- `./gradlew :fabric:runClientGameTest` (Fabric only): counting, chest memory, pinning, typed amounts, Break down, the
-  list and settings screens and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it
-  again with that recipe viewer installed. Add `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`
-  for 26.2 (JEI 30.29 there; REI only on 26.3); add `-Pneoforge_version=26.2.0.93` too so the NeoForge project configures for 26.2.
+- `./gradlew :fabric:runClientGameTest`: counting, chest memory, pinning, typed amounts, Break down, the
+  list and settings screens and saving. `./gradlew :neoforge:runClientTest`: the NeoForge jar's
+  checks (keys, counting, chest memory, a used storage block, the pin key, the screens). Add
+  `-PtestViewer=jei` or `-PtestViewer=rei` to either to run it with that recipe viewer installed
+  (JEI 19.27.0.346, REI 16.0.799 with Cloth Config and Architectury).
 
 ## Gotchas
 
 - **Fair play is a promise.** Pocket List never sends anything to a server and only counts what
   the player has seen: no scanning unopened chests, no finding blocks through walls. Keep it so.
-  Blocks that hold things without a screen (shelves, Espresso Flavoured's
-  canisters and jars, anything with Fabric item storage whose contents the server sends to every
-  game) are read through the loader's item storage (`ItemStorage.SIDED` on Fabric, `Capabilities.Item.BLOCK` on NeoForge) from `ChestMemory`, but only after the player has used
+  Blocks that hold things without a screen (decorated pots, other mods' jars and canisters:
+  anything with item storage whose contents the server sends to every game) are read through the
+  loader's item storage (`ItemStorage.SIDED` on Fabric, `Capabilities.ItemHandler.BLOCK` on
+  NeoForge) from `ChestMemory`, but only after the player has used
   that block, and they're kept live while the player is within 32 blocks. A chest read that way
   shows empty on the player's side, so chests stay on the screen path.
 - Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes, which
@@ -45,10 +51,20 @@ it first, and add this session's row before ending.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
   top-right with Simple HUD Enhanced, top-left otherwise. Top right sits below the effect icons.
 - The Espresso Flavoured modpack carries a copy of this jar in its `client-overrides/mods/`.
-- **One jar for 26.2 and 26.3.** It's built against 26.3. The few game calls that differ between
-  the versions go through `Compat.java` (looked up by name). A method that kept its name but
-  changed its return type compiles on both and still crashes on the other, so CI runs
-  `tools/check-linkage.js` on the jar against 26.2's game code, and runs the game test on 26.2.
+- **What 1.21.1 does differently.** The game ships obfuscated: the code uses Mojang's names and
+  Loom remaps the Fabric jar (`fabric-loom` with `officialMojangMappings()`; NeoForge runs on
+  Mojang names already). There are no recipe displays: `Recipes` reads the client's own
+  `RecipeManager`, which 1.21.1 fills with every recipe on any server, and an ingredient's tag is
+  read by writing it out with `Ingredient.CODEC_NONEMPTY` (the game keeps it private). Smithing
+  recipes list no ingredients, so `SmithingTransformRecipeAccessor` reads their three inputs.
+  There are no shelves: the used-storage test uses a decorated pot, whose contents reach the
+  player's game at chunk load or from `data merge`, not when filled by hand. Bundles are an
+  experiment, so the tests check them through `Counter.add` on a made-up stack.
+- `common` compiles against the recipe viewers' NeoForge builds (Mojang names, nothing to remap).
+  Remapped there, a Fabric build lacked Fabric API on the classpath, came out half-renamed, and the
+  Fabric test run reused that copy from Loom's shared cache (JEI crashed with an AbstractMethodError
+  on `reload`). After changing viewer dependencies, delete `.gradle/loom-cache/remapped_mods`.
+- JEI 19.27 has no `IRecipeSlotView.getTagKey()`; `JeiViewer` calls it when a newer JEI has it.
 
 ## Gabby's mods: who does what (the same in every repo)
 
@@ -126,6 +142,6 @@ or test names. Check the diff for these before every push.
 - Keep the credit line: "made by Gabby with help from Claude, an AI assistant".
 - Gabby publishes on Modrinth herself. Don't upload anything there.
 
-**Minecraft.** Fabric on Minecraft 26.3 (Mojang names; Loom 1.18.4, Java 25). Vanilla names
-changed a lot in 26.x: check the merged jar rather than older docs (for example `iron_chain`,
-`pink_petals[flower_amount=N]`, timelines instead of `time query daytime`).
+**Minecraft.** This branch: Minecraft 1.21.1 (Mojang names through Loom's official mappings;
+Loom 1.18.4 run by Java 25, code compiled for Java 21; NeoForge 21.1 through ModDevGradle). Check
+the game's own classes (Loom's merged jar) rather than newer docs: much was renamed in 26.x.

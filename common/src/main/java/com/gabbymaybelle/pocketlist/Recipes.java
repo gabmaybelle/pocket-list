@@ -9,21 +9,19 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
-import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 
 /**
  * Finds the ways to make an item, from the best source there is:
  * <ol>
- * <li>your own world, in single player or a world you're hosting, which knows every recipe;</li>
+ * <li>the recipes the world or server sent your game when you joined: on 1.21.1 that's every
+ * recipe, unlocked or not, in single player and on servers alike;</li>
  * <li>an installed recipe viewer (JEI or REI);</li>
  * <li>your recipe book, which only has the recipes you've unlocked.</li>
  * </ol>
@@ -55,24 +53,15 @@ public final class Recipes {
 		return tidy(found);
 	}
 
-	/** Every recipe the integrated server has loaded: all of them, unlocked or not. */
+	/** Every recipe the world or server sent this game: all of them, unlocked or not. */
 	private static List<FoundRecipe> fromWorld(Minecraft mc, Item item) {
-		IntegratedServer server = mc.getSingleplayerServer();
-		if (server == null) {
-			return List.of();
-		}
-		ContextMap context = SlotDisplayContext.fromLevel(mc.level);
+		RegistryAccess registries = mc.level.registryAccess();
 		try {
-			// Read straight from here: the server swaps in a whole new set of recipes on /reload rather
-			// than changing them in place, so this never sees half a set. Waiting for the server's own
-			// thread instead could freeze the game.
 			List<FoundRecipe> out = new ArrayList<>();
-			for (RecipeHolder<?> holder : List.copyOf(server.getRecipeManager().getRecipes())) {
-				for (RecipeDisplay display : holder.value().display()) {
-					FoundRecipe recipe = fromDisplay(display, item, context);
-					if (recipe != null) {
-						out.add(recipe);
-					}
+			for (RecipeHolder<?> holder : List.copyOf(mc.level.getRecipeManager().getRecipes())) {
+				FoundRecipe recipe = fromRecipe(holder.value(), item, registries);
+				if (recipe != null) {
+					out.add(recipe);
 				}
 			}
 			return out;
@@ -86,11 +75,11 @@ public final class Recipes {
 		if (mc.player == null) {
 			return List.of();
 		}
-		ContextMap context = SlotDisplayContext.fromLevel(mc.level);
+		RegistryAccess registries = mc.level.registryAccess();
 		List<FoundRecipe> out = new ArrayList<>();
 		for (RecipeCollection collection : mc.player.getRecipeBook().getCollections()) {
-			for (RecipeDisplayEntry entry : collection.getRecipes()) {
-				FoundRecipe recipe = fromDisplay(entry.display(), item, context);
+			for (RecipeHolder<?> holder : collection.getRecipes()) {
+				FoundRecipe recipe = fromRecipe(holder.value(), item, registries);
 				if (recipe != null) {
 					out.add(recipe);
 				}
@@ -99,25 +88,23 @@ public final class Recipes {
 		return out;
 	}
 
-	/** A vanilla recipe display, if it makes the item. */
-	static FoundRecipe fromDisplay(RecipeDisplay display, Item item, ContextMap context) {
-		int makes = 0;
-		for (ItemStack result : display.result().resolveForStacks(context)) {
-			if (result.is(item)) {
-				makes = result.getCount();
-				break;
-			}
-		}
-		if (makes <= 0) {
+	/** A vanilla recipe, if it makes the item. */
+	static FoundRecipe fromRecipe(Recipe<?> recipe, Item item, RegistryAccess registries) {
+		if (recipe.isSpecial()) {
+			// Dyeing armour, cloning maps and the like: no fixed ingredients to gather.
 			return null;
 		}
-		List<Entry> ingredients = Pins.ingredients(display, context);
+		ItemStack result = recipe.getResultItem(registries);
+		if (!result.is(item) || result.getCount() <= 0) {
+			return null;
+		}
+		List<Entry> ingredients = Pins.ingredients(recipe);
 		if (ingredients.isEmpty()) {
 			return null;
 		}
-		ItemStack station = display.craftingStation().resolveForFirstStack(context);
+		ItemStack station = recipe.getToastSymbol();
 		Component where = station.isEmpty() ? Component.translatable("pocket_list.recipe.anywhere") : station.getHoverName();
-		return new FoundRecipe(ingredients, makes, station, where);
+		return new FoundRecipe(ingredients, result.getCount(), station, where);
 	}
 
 	/** Adds up repeated ingredients ("3 planks", not three lines of one). */

@@ -1,12 +1,11 @@
 package com.gabbymaybelle.pocketlist;
 
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -65,19 +64,19 @@ public class RecipeChooserScreen extends Screen {
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-		super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-		graphics.centeredText(font, title, width / 2, 12, TEXT);
-		graphics.centeredText(font, Component.translatable("pocket_list.chooser.hint"), width / 2, 24, MUTED);
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+		super.render(graphics, mouseX, mouseY, partialTick);
+		graphics.drawCenteredString(font, title, width / 2, 12, TEXT);
+		graphics.drawCenteredString(font, Component.translatable("pocket_list.chooser.hint"), width / 2, 24, MUTED);
 		int pages = (recipes.size() + perPage - 1) / perPage;
 		if (pages > 1) {
-			graphics.text(font, Component.translatable("pocket_list.screen.page", page + 1, pages), (width - panel) / 2 + 50, height - 20, MUTED, true);
+			graphics.drawString(font, Component.translatable("pocket_list.screen.page", page + 1, pages), (width - panel) / 2 + 50, height - 20, MUTED, true);
 		}
 	}
 
 	@Override
 	public void onClose() {
-		minecraft.gui.setScreen(parent);
+		minecraft.setScreen(parent);
 	}
 
 	@Override
@@ -95,44 +94,44 @@ public class RecipeChooserScreen extends Screen {
 		}
 
 		@Override
-		protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+		protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 			graphics.fill(getX(), getY(), getX() + width, getY() + height, isHoveredOrFocused() ? 0x60FFFFFF : 0x40000000);
 			int x = getX() + 3;
 			int y = getY() + 3;
 			if (!recipe.station().isEmpty()) {
-				graphics.item(recipe.station(), x, y);
+				graphics.renderItem(recipe.station(), x, y);
 			}
 			x += 20;
 			String where = recipe.where().getString();
 			String shown = font.plainSubstrByWidth(where, WHERE_WIDTH);
-			graphics.text(font, shown.length() < where.length() ? font.plainSubstrByWidth(where, WHERE_WIDTH - 8) + "..." : where, x, y + 4, MUTED, true);
+			graphics.drawString(font, shown.length() < where.length() ? font.plainSubstrByWidth(where, WHERE_WIDTH - 8) + "..." : where, x, y + 4, MUTED, true);
 			if (shown.length() < where.length() && mouseX >= x && mouseX < x + WHERE_WIDTH && mouseY >= getY() && mouseY < getY() + height) {
-				graphics.setTooltipForNextFrame(font, recipe.where(), mouseX, mouseY);
+				setTooltipForNextRenderPass(recipe.where());
 			}
 			x += WHERE_WIDTH + 6;
 			for (Entry ingredient : recipe.ingredients()) {
 				if (x > getX() + width - 70) {
-					graphics.text(font, "...", x, y + 4, MUTED, true);
+					graphics.drawString(font, "...", x, y + 4, MUTED, true);
 					break;
 				}
 				ItemStack icon = ingredient.icon();
-				graphics.item(icon, x, y);
+				graphics.renderItem(icon, x, y);
 				if (ingredient.need > 1) {
-					graphics.itemDecorations(font, icon, x, y, Integer.toString(ingredient.need));
+					graphics.renderItemDecorations(font, icon, x, y, Integer.toString(ingredient.need));
 				}
 				if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
-					graphics.setTooltipForNextFrame(font, ingredient.name(), mouseX, mouseY);
+					setTooltipForNextRenderPass(ingredient.name());
 				}
 				x += 20;
 			}
 			Component makes = Component.translatable("pocket_list.chooser.makes", recipe.makes());
-			graphics.text(font, makes, getX() + width - 4 - font.width(makes), y + 4, TEXT, true);
+			graphics.drawString(font, makes, getX() + width - 4 - font.width(makes), y + 4, TEXT, true);
 		}
 
 		@Override
-		public void onClick(MouseButtonEvent event, boolean doubleClick) {
+		public void onClick(double mouseX, double mouseY) {
 			Lists.breakDown(entry, recipe);
-			minecraft.gui.setScreen(parent);
+			minecraft.setScreen(parent);
 			parent.changed();
 		}
 

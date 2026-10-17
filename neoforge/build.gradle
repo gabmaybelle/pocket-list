@@ -42,28 +42,22 @@ neoForge {
 }
 
 dependencies {
-	// Recipe viewers: compiled against their APIs only; not bundled or required.
-	compileOnly "maven.modrinth:jei:csqmrfNS"
-	compileOnly "maven.modrinth:rei:rKsAE6bX"
-	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
-	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	// Recipe viewers: compiled against their NeoForge builds; not bundled or required.
+	// (Modrinth version ids: JEI 19.27.0.346, REI 16.0.799, Cloth Config 15.0.140, Architectury 13.0.11.)
+	compileOnly "maven.modrinth:jei:eBag7ypX"
+	compileOnly "maven.modrinth:rei:b8gfS9Je"
+	compileOnly "maven.modrinth:cloth-config:izKINKFg"
+	compileOnly "maven.modrinth:architectury-api:1IiqEQGl"
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 
 	// `./gradlew :neoforge:runClientTest -PtestViewer=jei` (or rei) runs the in-game test with that
-	// viewer's NeoForge build installed. On 26.2 JEI is 30.29.0.201; REI is only tested on 26.3, as on Fabric.
+	// viewer's NeoForge build installed.
 	if (project.findProperty("testViewer") == "jei") {
-		if (project.minecraft_version == "26.2") {
-			runtimeOnly "maven.modrinth:jei:wTO6kl61"
-		} else {
-			// JEI 31.12.0.65, and the settings library it needs from 31 on.
-			runtimeOnly "maven.modrinth:jei:3B1tTT57"
-			runtimeOnly "maven.modrinth:mezzconfig:WFeT02Wv"
-		}
+		runtimeOnly "maven.modrinth:jei:eBag7ypX"
 	} else if (project.findProperty("testViewer") == "rei") {
-		// REI 26.3.824, with Cloth Config and Architectury, which it needs.
-		runtimeOnly "maven.modrinth:rei:uwE0PJmc"
-		runtimeOnly "maven.modrinth:cloth-config:GchRXPnb"
-		runtimeOnly "maven.modrinth:architectury-api:dZ7iNvS4"
+		runtimeOnly "maven.modrinth:rei:b8gfS9Je"
+		runtimeOnly "maven.modrinth:cloth-config:izKINKFg"
+		runtimeOnly "maven.modrinth:architectury-api:1IiqEQGl"
 	}
 }
 

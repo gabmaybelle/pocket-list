@@ -1,17 +1,17 @@
 package com.gabbymaybelle.pocketlist;
 
-import com.gabbymaybelle.pocketlist.mixin.AbstractRecipeBookScreenAccessor;
+import com.gabbymaybelle.pocketlist.harness.ClientGameTest;
+import com.gabbymaybelle.pocketlist.harness.ClientGameTestContext;
+import com.gabbymaybelle.pocketlist.harness.TestServerContext;
+import com.gabbymaybelle.pocketlist.harness.TestSingleplayerContext;
 import com.gabbymaybelle.pocketlist.mixin.RecipeBookComponentAccessor;
 import java.lang.reflect.Field;
 import java.util.List;
-import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
-import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookPage;
 import net.minecraft.client.gui.screens.recipebook.RecipeButton;
+import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.inventory.RecipeBookType;
@@ -20,9 +20,9 @@ import net.minecraft.world.item.Items;
 /**
  * Takes the screenshots for the mod page, in a normal world at 1280x720. Only runs when the
  * POCKET_LIST_SHOTS environment variable is set:
- * `POCKET_LIST_SHOTS=1 ./gradlew runClientGameTest` (add -PtestViewer=jei for the JEI shot).
+ * `POCKET_LIST_SHOTS=1 ./gradlew :fabric:runClientGameTest` (add -PtestViewer=jei for the JEI shot).
  */
-public class ScreenshotTour implements FabricClientGameTest {
+public class ScreenshotTour implements ClientGameTest {
 	static boolean enabled() {
 		return System.getenv("POCKET_LIST_SHOTS") != null;
 	}
@@ -35,15 +35,15 @@ public class ScreenshotTour implements FabricClientGameTest {
 		ctx.getInput().resizeWindow(1280, 720);
 		ctx.runOnClient(mc -> {
 			mc.options.guiScale().set(2);
-			mc.resizeGui();
+			mc.resizeDisplay();
 		});
-		try (TestSingleplayerContext world = ctx.worldBuilder().setUseConsistentSettings(false).adjustSettings(state -> {
+		try (TestSingleplayerContext world = ctx.worldBuilder().normalWorld().adjustSettings(state -> {
 			state.setSeed("pocket list");
 			state.setGameMode(WorldCreationUiState.SelectedGameMode.SURVIVAL);
 			state.setDifficulty(Difficulty.PEACEFUL);
 			state.setAllowCommands(true);
 		}).create()) {
-			world.getConnection().waitForChunksRender();
+			world.waitForChunksRender();
 			TestServerContext server = world.getServer();
 			server.runCommand("time set 5000");
 			// Stand on the treetops with a view, rather than inside a tree.
@@ -54,7 +54,7 @@ public class ScreenshotTour implements FabricClientGameTest {
 			server.runCommand("give @a glass_pane 32");
 			server.runCommand("give @a torch 5");
 			server.runCommand("give @a lantern 3");
-			server.runCommand("give @a bundle[bundle_contents=[{id:\"minecraft:iron_nugget\",count:30}]]");
+			server.runCommand("give @a iron_nugget 30");
 			ctx.runOnClient(mc -> {
 				Lists.data().lists.clear();
 				Lists.active().name = "Cottage";
@@ -65,15 +65,15 @@ public class ScreenshotTour implements FabricClientGameTest {
 				Lists.add(Entry.ofItem(Items.COBBLESTONE, 64));
 				Lists.add(Entry.ofItem(Items.FLOWER_POT, 4));
 				Lists.data().welcomed = true;
-				mc.gui.toastManager().clear();
-				mc.player.getInventory().setSelectedSlot(8);
+				mc.getToasts().clear();
+				mc.player.getInventory().selected = 8;
 			});
 			ctx.waitTicks(40);
-			world.getConnection().waitForChunksRender();
+			world.waitForChunksRender();
 			ctx.runOnClient(mc -> {
-				mc.gui.toastManager().clear();
+				mc.getToasts().clear();
 				// The setup commands' messages aren't part of the picture.
-				mc.gui.hud.getChat().clearMessages(false);
+				mc.gui.getChat().clearMessages(false);
 			});
 			ctx.runOnClient(Counter::update);
 			ctx.waitTicks(5);
@@ -87,14 +87,14 @@ public class ScreenshotTour implements FabricClientGameTest {
 			// The chooser, for iron ingots.
 			ctx.runOnClient(mc -> {
 				Lists.add(Entry.ofItem(Items.IRON_INGOT, 9));
-				((PocketListScreen) mc.gui.screen()).changed();
+				((PocketListScreen) mc.screen).changed();
 				Entry iron = Lists.active().entries.getLast();
-				mc.gui.setScreen(new RecipeChooserScreen((PocketListScreen) mc.gui.screen(), iron, Recipes.forItem(mc, Items.IRON_INGOT)));
+				mc.setScreen(new RecipeChooserScreen((PocketListScreen) mc.screen, iron, Recipes.forItem(mc, Items.IRON_INGOT)));
 			});
 			ctx.waitTicks(5);
 			ctx.takeScreenshot("page_chooser");
 			ctx.runOnClient(mc -> {
-				mc.gui.setScreen(null);
+				mc.setScreen(null);
 				Lists.active().entries.removeIf(e -> e.key().equals("minecraft:iron_ingot"));
 			});
 
@@ -114,7 +114,7 @@ public class ScreenshotTour implements FabricClientGameTest {
 
 	@SuppressWarnings("unchecked")
 	private static List<RecipeButton> visibleRecipeButtons(net.minecraft.client.Minecraft mc) {
-		RecipeBookPage page = ((RecipeBookComponentAccessor) ((AbstractRecipeBookScreenAccessor) mc.gui.screen()).pocketList$recipeBook()).pocketList$page();
+		RecipeBookPage page = ((RecipeBookComponentAccessor) ((RecipeUpdateListener) mc.screen).getRecipeBookComponent()).pocketList$page();
 		try {
 			Field f = RecipeBookPage.class.getDeclaredField("buttons");
 			f.setAccessible(true);

@@ -23,14 +23,16 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
@@ -38,7 +40,7 @@ import net.neoforged.fml.ModList;
 /**
  * The NeoForge jar's in-game test, a part of the Fabric game test (fabric/src/gametest) that covers
  * what NeoForge does differently: the default keys, counting what's carried (bundles and shulker
- * boxes too), chest memory through the screen path, a shelf through NeoForge's item storage,
+ * boxes too), chest memory through the screen path, a decorated pot through NeoForge's item storage,
  * pinning with the pin key through NeoForge's screen key event (and, with JEI or REI installed,
  * from the viewer's item list, but not while typing in its search box), and the list and
  * settings screens.
@@ -46,8 +48,6 @@ import net.neoforged.fml.ModList;
 final class PocketListClientTest {
 	/** Where the test's chests and shelf go, next to where the player starts. */
 	private static BlockPos here;
-	/** Iron ingots left in the hand after putting some on the shelf. */
-	private static int inHand;
 	/** What the list needed before a key press, to compare with after it. */
 	private static Map<String, Integer> before;
 	/** A spot on screen (GUI coordinates) to point at or click; set by a step, used by the next. */
@@ -59,7 +59,7 @@ final class PocketListClientTest {
 	}
 
 	static void steps() {
-		// The default keys are K and Z on every version (26.3 renumbered keys, so they're looked up by name).
+		// The default keys are K and Z.
 		run(mc -> {
 			check(PocketList.OPEN_KEY.getDefaultKey().getName().equals("key.keyboard.k"), "The open key isn't K by default: " + PocketList.OPEN_KEY.getDefaultKey().getName());
 			check(PocketList.PIN_KEY.getDefaultKey().getName().equals("key.keyboard.z"), "The pin key isn't Z by default: " + PocketList.PIN_KEY.getDefaultKey().getName());
@@ -91,10 +91,12 @@ final class PocketListClientTest {
 		command("give @a minecraft:oak_log 6");
 		command("give @a minecraft:spruce_log 6");
 		command("give @a minecraft:stick 3");
-		command("give @a bundle[bundle_contents=[{id:\"minecraft:torch\",count:10}]]");
+		// Bundles are an experiment on 1.21.1 that this world doesn't have, so the torches come in a
+		// shulker box; a bundle is checked on its own below.
+		command("give @a orange_shulker_box[container=[{slot:0,item:{id:\"minecraft:torch\",count:10}}]]");
 		command("give @a white_shulker_box[container=[{slot:0,item:{id:\"minecraft:cobblestone\",count:64}}]]");
 		waitUntil("the given items in the inventory", 200,
-				mc -> mc.player.getInventory().countItem(Items.BUNDLE) >= 1 && mc.player.getInventory().countItem(BuiltInRegistries.ITEM.getOptional(Identifier.parse("minecraft:white_shulker_box")).orElseThrow()) >= 1
+				mc -> mc.player.getInventory().countItem(Items.ORANGE_SHULKER_BOX) >= 1 && mc.player.getInventory().countItem(Items.WHITE_SHULKER_BOX) >= 1
 						&& mc.player.getInventory().countItem(Items.STICK) >= 3);
 		recount();
 		expectHave("#minecraft:logs", 12);
@@ -102,6 +104,18 @@ final class PocketListClientTest {
 		expectHave("minecraft:torch", 10);
 		expectHave("minecraft:cobblestone", 64);
 		expectHave("minecraft:iron_ingot", 0);
+		// What's in a bundle counts too, and a bundle in a shulker box.
+		run(mc -> {
+			ItemStack bundle = new ItemStack(Items.BUNDLE);
+			bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(Items.TORCH, 7))));
+			ItemStack box = new ItemStack(Items.WHITE_SHULKER_BOX);
+			box.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(List.of(bundle.copy())));
+			Map<Item, Integer> totals = new HashMap<>();
+			Counter.add(bundle, totals, 0);
+			Counter.add(box, totals, 0);
+			int torches = totals.getOrDefault(Items.TORCH, 0);
+			check(torches == 14, "Torches in a bundle, and in a bundle in a shulker box: expected 14, counted " + torches);
+		});
 		screenshot();
 	}
 
@@ -123,30 +137,39 @@ final class PocketListClientTest {
 		openAndClose(4, 0);
 		expectHave("minecraft:iron_ingot", 4);
 
-		// A shelf holds things without opening a screen: using it with ingots in hand puts them on it,
-		// and it's remembered through NeoForge's item storage.
-		setblockAt(2, 2, "oak_shelf[facing=north]");
-		command("item replace entity @a hotbar.8 with iron_ingot 2");
-		waitUntil("two iron ingots in the hotbar", 100, mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) == 2);
-		run(mc -> mc.player.getInventory().setSelectedSlot(8));
-		waitTicks(3);
-		run(mc -> {
-			BlockPos shelf = here.offset(2, 0, 2);
-			// The middle of the shelf's front.
-			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(shelf).add(0, 0, -0.5), Direction.NORTH, shelf, false));
-		});
-		waitUntil("ingots put on the shelf", 100, mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) < 2);
-		run(mc -> inHand = mc.player.getInventory().countItem(Items.IRON_INGOT));
-		waitTicks(ChestMemory.STORAGE_WAIT + 5);
+		// A decorated pot holds things without opening a screen, and the game tells every player what's
+		// in it when its chunk loads (or a command changes it). Using it with an empty hand only wobbles
+		// it; it's remembered through NeoForge's item storage.
+		setblockAt(2, 2, "decorated_pot{item:{id:\"minecraft:iron_ingot\",count:2}}");
+		command("item replace entity @a hotbar.8 with air");
+		run(mc -> mc.player.getInventory().selected = 8);
 		recount();
-		// Four in the chests, and the two ingots split between the hand and the shelf.
+		// Not used yet: nothing from the pot counts.
+		expectHave("minecraft:iron_ingot", 4);
+		run(mc -> {
+			BlockPos pot = here.offset(2, 0, 2);
+			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pot), Direction.UP, pot, false));
+		});
+		waitTicks(ChestMemory.STORAGE_WAIT + 5);
+		run(mc -> check(mc.screen == null, "A decorated pot opened a screen"));
+		recount();
+		// Four in the chests and two in the pot.
 		expectHave("minecraft:iron_ingot", 6);
 		run(mc -> Lists.data().countChests = false);
 		recount();
-		run(mc -> expectHaveNow("minecraft:iron_ingot", inHand));
+		expectHave("minecraft:iron_ingot", 0);
 		run(mc -> Lists.data().countChests = true);
+		// When the game is told the pot changed, the count follows without using it again.
+		run(mc -> {
+			BlockPos pot = here.offset(2, 0, 2);
+			IntegratedServer server = mc.getSingleplayerServer();
+			String command = "data merge block " + pot.getX() + " " + pot.getY() + " " + pot.getZ() + " {item:{id:\"minecraft:iron_ingot\",count:3}}";
+			server.execute(() -> server.getCommands().performPrefixedCommand(server.createCommandSourceStack(), command));
+		});
+		waitTicks(4);
 		recount();
-		run(mc -> mc.player.getInventory().setSelectedSlot(0));
+		expectHave("minecraft:iron_ingot", 7);
+		run(mc -> mc.player.getInventory().selected = 0);
 	}
 
 	/**
@@ -157,19 +180,19 @@ final class PocketListClientTest {
 	private static void pinning() {
 		openInventory();
 		pointAtSlotWith(Items.STICK);
-		run(mc -> check(Pins.hoveredItem(mc, mc.gui.screen()).is(Items.STICK), "The mouse isn't over the sticks' slot"));
+		run(mc -> check(Pins.hoveredItem(mc, mc.screen).is(Items.STICK), "The mouse isn't over the sticks' slot"));
 		run(mc -> before = needs());
 		pressKey("key.keyboard.z", false);
 		run(mc -> expectNeed("minecraft:stick", before.getOrDefault("minecraft:stick", 0) + 1));
 		pressKey("key.keyboard.z", true);
-		run(mc -> expectNeed("minecraft:stick", before.getOrDefault("minecraft:stick", 0) + 1 + Items.STICK.getDefaultMaxStackSize()));
+		run(mc -> expectNeed("minecraft:stick", before.getOrDefault("minecraft:stick", 0) + 1 + new ItemStack(Items.STICK).getMaxStackSize()));
 		// With nothing under the mouse, the key pins nothing.
 		moveMouse(1, 1);
 		run(mc -> before = needs());
 		pressKey("key.keyboard.z", false);
 		run(mc -> check(needs().equals(before), "The pin key pinned something with nothing under the mouse: " + needs()));
 		screenshot();
-		run(mc -> mc.gui.setScreen(null));
+		run(mc -> mc.setScreen(null));
 		waitTicks(3);
 	}
 
@@ -190,14 +213,14 @@ final class PocketListClientTest {
 		clickSearchBox();
 		screenshot();
 		run(mc -> check(Pins.typingInViewer(), "Couldn't click into the recipe viewer's search box after " + searchClicks
-				+ " clicks along the bottom of a " + mc.gui.screen().width + "x" + mc.gui.screen().height + " screen (focused: "
-				+ mc.gui.screen().getFocused() + ")"));
+				+ " clicks along the bottom of a " + mc.screen.width + "x" + mc.screen.height + " screen (focused: "
+				+ mc.screen.getFocused() + ")"));
 		run(mc -> before = needs());
 		pressKey("key.keyboard.z", false);
 		run(mc -> check(needs().equals(before), "Pressing Z while typing in the recipe viewer's search pinned something: " + needs()));
 		run(mc -> check(!Viewers.all().isEmpty() && !Viewers.all().getFirst().recipesFor(Items.LANTERN).isEmpty(),
 				"The recipe viewer doesn't know how to make a lantern"));
-		run(mc -> mc.gui.setScreen(null));
+		run(mc -> mc.setScreen(null));
 		waitTicks(3);
 	}
 
@@ -206,7 +229,7 @@ final class PocketListClientTest {
 		List<int[]> spots = new ArrayList<>();
 		run(mc -> {
 			viewerItem = null;
-			int width = mc.gui.screen().width, height = mc.gui.screen().height;
+			int width = mc.screen.width, height = mc.screen.height;
 			for (int y = 30; y < height - 30; y += 18) {
 				for (int x = width - 12; x > width / 2 + 100; x -= 18) {
 					spots.add(new int[] { x, y });
@@ -224,7 +247,7 @@ final class PocketListClientTest {
 					wait--;
 					return false;
 				}
-				if (next > 0 && !Pins.hoveredItem(mc, mc.gui.screen()).isEmpty()) {
+				if (next > 0 && !Pins.hoveredItem(mc, mc.screen).isEmpty()) {
 					viewerItem = spots.get(next - 1);
 					return true;
 				}
@@ -256,7 +279,7 @@ final class PocketListClientTest {
 					wait--;
 					return false;
 				}
-				int width = mc.gui.screen().width, height = mc.gui.screen().height;
+				int width = mc.screen.width, height = mc.screen.height;
 				int[][] spots = { { width / 2, height - 10 }, { width - 70, height - 10 }, { width - 70, height - 14 },
 						{ width - 40, height - 12 }, { width - 100, height - 12 }, { width - 70, height - 7 }, { width - 70, height - 18 } };
 				if (phase == 0) {
@@ -284,16 +307,16 @@ final class PocketListClientTest {
 	private static void openInventory() {
 		run(mc -> {
 			mc.player.getRecipeBook().setOpen(RecipeBookType.CRAFTING, false);
-			mc.gui.setScreen(new InventoryScreen(mc.player));
+			mc.setScreen(new InventoryScreen(mc.player));
 		});
-		waitUntil("the inventory screen", 40, mc -> mc.gui.screen() instanceof InventoryScreen);
+		waitUntil("the inventory screen", 40, mc -> mc.screen instanceof InventoryScreen);
 		waitTicks(3);
 	}
 
 	/** Points the mouse at the first inventory slot holding this item. */
 	private static void pointAtSlotWith(Item item) {
 		run(mc -> {
-			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.gui.screen();
+			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.screen;
 			int left = (int) field(screen, AbstractContainerScreen.class, "leftPos");
 			int top = (int) field(screen, AbstractContainerScreen.class, "topPos");
 			target = null;
@@ -324,12 +347,12 @@ final class PocketListClientTest {
 
 	/** The list screen and its settings screen open, and the settings follow from the list screen. */
 	private static void screens() {
-		run(mc -> mc.gui.setScreen(new PocketListScreen(null)));
-		waitUntil("the list screen", 40, mc -> mc.gui.screen() instanceof PocketListScreen);
+		run(mc -> mc.setScreen(new PocketListScreen(null)));
+		waitUntil("the list screen", 40, mc -> mc.screen instanceof PocketListScreen);
 		screenshot();
-		run(mc -> mc.gui.setScreen(new PocketListSettingsScreen(mc.gui.screen())));
-		waitUntil("the settings screen", 40, mc -> mc.gui.screen() instanceof PocketListSettingsScreen);
-		run(mc -> mc.gui.setScreen(null));
+		run(mc -> mc.setScreen(new PocketListSettingsScreen(mc.screen)));
+		waitUntil("the settings screen", 40, mc -> mc.screen instanceof PocketListSettingsScreen);
+		run(mc -> mc.setScreen(null));
 		waitTicks(5);
 	}
 
@@ -349,7 +372,7 @@ final class PocketListClientTest {
 			BlockPos pos = here.offset(east, 0, south);
 			mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
 		});
-		waitUntil("a chest screen", 100, mc -> mc.gui.screen() instanceof ContainerScreen);
+		waitUntil("a chest screen", 100, mc -> mc.screen instanceof ContainerScreen);
 		waitTicks(3);
 		run(mc -> mc.player.closeContainer());
 		waitTicks(2);

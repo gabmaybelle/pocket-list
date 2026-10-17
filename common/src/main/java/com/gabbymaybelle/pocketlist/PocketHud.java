@@ -6,11 +6,11 @@ import java.util.List;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.EffectRenderingInventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.Util;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.Util;
 import net.minecraft.world.effect.MobEffectInstance;
 
 /** The active list in the top-left corner: one line per thing, still-to-gather first. */
@@ -33,13 +33,13 @@ public final class PocketHud {
 	}
 
 	/** The HUD element's id; each loader registers {@link #extract} under it. */
-	public static final Identifier ID = Identifier.fromNamespaceAndPath(PocketList.MOD_ID, "list");
+	public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(PocketList.MOD_ID, "list");
 
-	public static void extract(GuiGraphicsExtractor graphics, DeltaTracker delta) {
+	public static void render(GuiGraphics graphics, DeltaTracker delta) {
 		Minecraft mc = Minecraft.getInstance();
 		Lists.PocketListData list = Lists.active();
 		if (!Lists.data().hud || list.entries.isEmpty() || mc.player == null
-				|| mc.getDebugOverlay().showDebugScreen() || mc.gui.screen() instanceof PocketListScreen) {
+				|| mc.getDebugOverlay().showDebugScreen() || mc.screen instanceof PocketListScreen) {
 			return;
 		}
 		Font font = mc.font;
@@ -81,7 +81,7 @@ public final class PocketHud {
 		graphics.fill(x, y, x + boxWidth, y + boxHeight, BACKDROP);
 		x += PADDING;
 		y += PADDING;
-		graphics.text(font, title, x, y, allDone ? DONE : TITLE, true);
+		graphics.drawString(font, title, x, y, allDone ? DONE : TITLE, true);
 		y += 10;
 		long now = Util.getMillis();
 		for (int i = 0; i < shown; i++) {
@@ -89,12 +89,12 @@ public final class PocketHud {
 			if (entry.flashUntil > now) {
 				graphics.fill(x - 1, y, x + width + 1, y + LINE - 1, FLASH);
 			}
-			graphics.item(entry.icon(), x, y);
-			graphics.text(font, lines.get(i), x + 18, y + 4, entry.done() ? DONE : TEXT, true);
+			graphics.renderItem(entry.icon(), x, y);
+			graphics.drawString(font, lines.get(i), x + 18, y + 4, entry.done() ? DONE : TEXT, true);
 			y += LINE;
 		}
 		if (more != null) {
-			graphics.text(font, more, x, y + 1, MUTED, true);
+			graphics.drawString(font, more, x, y + 1, MUTED, true);
 		}
 	}
 
@@ -112,8 +112,7 @@ public final class PocketHud {
 	 * lower in the demo). The icons are hidden while a screen that lists effects itself is open.
 	 */
 	static int belowEffects(Minecraft mc) {
-		Screen screen = mc.gui.screen();
-		if (screen != null && screen.showsActiveEffects()) {
+		if (mc.screen instanceof EffectRenderingInventoryScreen<?> screen && screen.canSeeEffects()) {
 			return MARGIN;
 		}
 		boolean beneficial = false;

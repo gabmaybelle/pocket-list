@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -20,7 +20,6 @@ import net.fabricmc.fabric.api.transfer.v1.item.ItemVariant;
 import net.fabricmc.fabric.api.transfer.v1.storage.Storage;
 import net.fabricmc.fabric.api.transfer.v1.storage.StorageView;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.KeyMapping;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
@@ -58,10 +57,9 @@ public class PocketListFabric implements ClientModInitializer {
 		});
 		PocketList.init();
 
-		KeyMapping.Category.register(PocketList.CATEGORY.id());
-		KeyMappingHelper.registerKeyMapping(PocketList.OPEN_KEY);
-		KeyMappingHelper.registerKeyMapping(PocketList.PIN_KEY);
-		KeyMappingHelper.registerKeyMapping(PocketList.HUD_KEY);
+		KeyBindingHelper.registerKeyBinding(PocketList.OPEN_KEY);
+		KeyBindingHelper.registerKeyBinding(PocketList.PIN_KEY);
+		KeyBindingHelper.registerKeyBinding(PocketList.HUD_KEY);
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			PocketList.onTick(mc);
@@ -70,7 +68,8 @@ public class PocketListFabric implements ClientModInitializer {
 		ScreenEvents.AFTER_INIT.register((mc, screen, width, height) -> {
 			ChestMemory.onScreenInit(mc, screen);
 			ScreenEvents.remove(screen).register(ChestMemory::onScreenRemoved);
-			ScreenKeyboardEvents.allowKeyPress(screen).register((current, key) -> !PocketList.onScreenKey(mc, current, key));
+			ScreenKeyboardEvents.allowKeyPress(screen).register((current, key, scanCode, modifiers) ->
+					!PocketList.onScreenKey(mc, current, key, scanCode, modifiers));
 		});
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			ChestMemory.onUseBlock(level, hit.getBlockPos());
@@ -81,6 +80,6 @@ public class PocketListFabric implements ClientModInitializer {
 			ChestMemory.onJoin(mc);
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) -> ChestMemory.onDisconnect());
-		HudElementRegistry.addLast(PocketHud.ID, PocketHud::extract);
+		HudRenderCallback.EVENT.register(PocketHud::render);
 	}
 }

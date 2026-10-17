@@ -20,7 +20,7 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
@@ -43,8 +43,8 @@ import net.minecraft.world.level.storage.LevelResource;
  * chests you haven't opened yourself. The memory is kept per world (or per server address) in
  * config/pocket_list/chests, on your own computer.
  *
- * <p>Blocks that hold things without opening a screen (shelves, and other mods'
- * storage such as Espresso Flavoured's canisters and jars) are remembered once you've used them.
+ * <p>Blocks that hold things without opening a screen (decorated pots, and other mods' storage
+ * such as jars) are remembered once you've used them.
  * Those blocks tell every player's game what they hold, since they show it or can be checked at
  * a glance, so they're read through the loader's item storage and kept up to date while you're near.
  */
@@ -119,7 +119,7 @@ public final class ChestMemory {
 			return;
 		}
 		BlockPos pos = canonical(mc.level, lastUsed);
-		String dimension = mc.level.dimension().identifier().toString();
+		String dimension = mc.level.dimension().location().toString();
 		lastUsed = null;
 		Place place = new Place();
 		place.dimension = dimension;
@@ -185,8 +185,8 @@ public final class ChestMemory {
 	}
 
 	/**
-	 * A block you used that opened no screen. If it holds things this game can see (a shelf, a
-	 * canister), it's remembered and kept up to date from here on. A chest used
+	 * A block you used that opened no screen. If it holds things this game can see (a decorated
+	 * pot, a modded jar), it's remembered and kept up to date from here on. A chest used
 	 * without opening it shows nothing from here, so it's left to its screen.
 	 */
 	private static void rememberStorage(Minecraft mc, BlockPos pos) {
@@ -199,7 +199,7 @@ public final class ChestMemory {
 		}
 		BlockPos at = canonical(mc.level, pos);
 		Place place = new Place();
-		place.dimension = mc.level.dimension().identifier().toString();
+		place.dimension = mc.level.dimension().location().toString();
 		place.x = at.getX();
 		place.y = at.getY();
 		place.z = at.getZ();
@@ -241,7 +241,7 @@ public final class ChestMemory {
 		BlockState state = level.getBlockState(pos);
 		if (state.getBlock() instanceof ChestBlock && state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
 			BlockPos other = pos.relative(ChestBlock.getConnectedDirection(state)).immutable();
-			String dimension = level.dimension().identifier().toString();
+			String dimension = level.dimension().location().toString();
 			BlockPos first = other.compareTo(pos) < 0 ? other : pos;
 			BlockPos second = first == other ? pos : other;
 			REMEMBERED.remove(dimension + " " + second.getX() + " " + second.getY() + " " + second.getZ());
@@ -255,7 +255,7 @@ public final class ChestMemory {
 		if (mc.level == null || mc.player == null) {
 			return;
 		}
-		String dimension = mc.level.dimension().identifier().toString();
+		String dimension = mc.level.dimension().location().toString();
 		BlockPos here = mc.player.blockPosition();
 		boolean changed = false;
 		Iterator<Place> it = REMEMBERED.values().iterator();
@@ -290,7 +290,7 @@ public final class ChestMemory {
 			}
 			if (near) {
 				place.items.forEach((id, count) -> {
-					Identifier parsed = Identifier.tryParse(id);
+					ResourceLocation parsed = ResourceLocation.tryParse(id);
 					if (parsed != null) {
 						BuiltInRegistries.ITEM.getOptional(parsed).ifPresent(item -> into.merge(item, count, Integer::sum));
 					}

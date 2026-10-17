@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0+1.21.1
+
+Pocket List for Minecraft 1.21.1, on Fabric and NeoForge: the same mod as 0.2.0 for 26.x, with the HUD checklist, the list and settings screens, pinning with Z from inventories, the recipe book, JEI and REI, Break down, and chest memory. What's different on 1.21.1, all down to the game itself:
+
+- There are no shelves in 1.21.1. Other mods' storage blocks that tell your game what they hold count once you've used them, as on 26.x.
+- Break down knows every recipe on servers as well as in single player, since 1.21.1 sends your game all of them.
+- Bundles are an experiment in 1.21.1; in a world with them on, what's inside counts.
+
 ## 0.2.0
 
 - Pocket List now comes as a NeoForge mod as well as a Fabric one, for Minecraft 26.2 and 26.3. It looks and works the same. On NeoForge, the settings are on the Mods screen's Config button. The Fabric file is now named `pocket-list-fabric-0.2.0.jar`.

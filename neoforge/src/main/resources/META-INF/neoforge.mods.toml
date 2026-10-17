@@ -18,14 +18,14 @@ config = "pocket_list.mixins.json"
 [[dependencies.pocket_list]]
 modId = "neoforge"
 type = "required"
-versionRange = "[26.2,)"
+versionRange = "[21.1,)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.pocket_list]]
 modId = "minecraft"
 type = "required"
-versionRange = "[26.2,26.4)"
+versionRange = "[1.21.1,1.21.2)"
 ordering = "NONE"
 side = "CLIENT"
 

@@ -10,9 +10,9 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -115,7 +115,7 @@ public final class Entry {
 
 	public Component name() {
 		if (tag != null) {
-			Identifier id = Identifier.tryParse(tag);
+			ResourceLocation id = ResourceLocation.tryParse(tag);
 			String words = (id == null ? tag : id.getPath()).replace('/', ' ').replace('_', ' ').toLowerCase(Locale.ROOT);
 			return Component.translatable("pocket_list.any", words);
 		}
@@ -138,12 +138,12 @@ public final class Entry {
 		if (tag != null) {
 			TagKey<Item> key = tagKey();
 			if (key != null) {
-				BuiltInRegistries.ITEM.get(key).map(HolderSet::stream).ifPresent(s -> s.map(Holder::value).forEach(out::add));
+				BuiltInRegistries.ITEM.getTag(key).map(HolderSet::stream).ifPresent(s -> s.map(Holder::value).forEach(out::add));
 			}
 			return out;
 		}
 		for (String id : items) {
-			Identifier parsed = Identifier.tryParse(id);
+			ResourceLocation parsed = ResourceLocation.tryParse(id);
 			if (parsed != null) {
 				BuiltInRegistries.ITEM.getOptional(parsed).ifPresent(out::add);
 			}
@@ -153,7 +153,7 @@ public final class Entry {
 
 	private TagKey<Item> tagKey() {
 		if (tagKey == null) {
-			Identifier id = Identifier.tryParse(tag);
+			ResourceLocation id = ResourceLocation.tryParse(tag);
 			tagKey = id == null ? null : TagKey.create(Registries.ITEM, id);
 		}
 		return tagKey;

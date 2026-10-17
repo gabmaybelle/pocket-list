@@ -10,7 +10,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 
 /**
  * Your lists and settings, kept in config/pocket_list.json. They're yours, not the world's,

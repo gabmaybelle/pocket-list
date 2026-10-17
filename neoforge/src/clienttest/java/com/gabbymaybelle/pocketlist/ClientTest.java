@@ -12,11 +12,10 @@ import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.Screenshot;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
@@ -26,6 +25,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * A small step-by-step in-game test for the NeoForge jar, since NeoForge has no client game test
@@ -96,32 +96,29 @@ final class ClientTest {
 
 	/** Saves a screenshot in the run's screenshots folder (named by the time it was taken). */
 	static void screenshot() {
-		run(mc -> Screenshot.grab(mc, false));
+		run(mc -> Screenshot.grab(mc.gameDirectory, mc.getMainRenderTarget(), message -> {}));
 		waitTicks(2);
 	}
 
 	/**
 	 * Presses and lets go of a key through the game's own keyboard handler, the way a player's key
-	 * press arrives, so NeoForge's screen key events fire as they do in play. The handler method is
-	 * private on 26.2 and public on 26.3, with the same arguments, so it's called by reflection.
+	 * press arrives, so NeoForge's screen key events fire as they do in play.
 	 */
 	static void pressKey(String keyName, boolean shift) {
 		run(mc -> {
-			// Looked up while the game runs: 26.3 renumbered keys and modifiers (Z is 90 on 26.2 and 29
-			// on 26.3), and a constant written here would be compiled in with 26.3's number.
 			int key = InputConstants.getKey(keyName).getValue();
-			KeyEvent event = new KeyEvent(key, 0, shift ? modShift() : 0);
-			long window = mc.getWindow().handle();
-			invoke(mc.keyboardHandler, KeyboardHandler.class, "keyPress", new Class<?>[] { long.class, int.class, KeyEvent.class }, window, GLFW_PRESS, event);
-			invoke(mc.keyboardHandler, KeyboardHandler.class, "keyPress", new Class<?>[] { long.class, int.class, KeyEvent.class }, window, GLFW_RELEASE, event);
+			int modifiers = shift ? GLFW.GLFW_MOD_SHIFT : 0;
+			long window = mc.getWindow().getWindow();
+			mc.keyboardHandler.keyPress(window, key, 0, GLFW.GLFW_PRESS, modifiers);
+			mc.keyboardHandler.keyPress(window, key, 0, GLFW.GLFW_RELEASE, modifiers);
 		});
 		waitTicks(2);
 	}
 
 	/**
 	 * Puts the mouse over a point in GUI coordinates and gives the screen a few frames to notice.
-	 * There's no real mouse in the test, so the handler's position is set directly (the same field
-	 * on 26.2 and 26.3); screens and recipe viewers read it from there.
+	 * There's no real mouse in the test, so the handler's position is set directly; screens and
+	 * recipe viewers read it from there.
 	 */
 	static void moveMouse(int guiX, int guiY) {
 		run(mc -> placeMouse(mc, guiX, guiY));
@@ -157,30 +154,9 @@ final class ClientTest {
 
 	/** Presses (or lets go of) the left button where the mouse is, for a click spread over frames. */
 	static void mouseButton(Minecraft mc, boolean down) {
-		MouseButtonInfo left = new MouseButtonInfo(inputConstant("MOUSE_BUTTON_LEFT"), 0);
-		Class<?>[] types = { long.class, MouseButtonInfo.class, int.class };
-		invoke(mc.mouseHandler, MouseHandler.class, "onButton", types, mc.getWindow().handle(), left, down ? GLFW_PRESS : GLFW_RELEASE);
-	}
-
-	/** Key and button actions, as the game's handlers take them (the same on 26.2 and 26.3). */
-	private static final int GLFW_RELEASE = 0, GLFW_PRESS = 1;
-
-	/** The Shift modifier bit of the running version (1 on 26.2, 3 on 26.3). */
-	private static int modShift() {
-		return inputConstant("MOD_SHIFT");
-	}
-
-	/**
-	 * An input number of the running version, read while the game runs. 26.3 renumbered keys, buttons
-	 * and modifiers (the left button is 0 on 26.2 and 1 on 26.3), and a constant written in the code
-	 * would be compiled in with 26.3's number.
-	 */
-	private static int inputConstant(String name) {
-		try {
-			return InputConstants.class.getField(name).getInt(null);
-		} catch (ReflectiveOperationException e) {
-			throw new AssertionError("No InputConstants." + name, e);
-		}
+		Class<?>[] types = { long.class, int.class, int.class, int.class };
+		invoke(mc.mouseHandler, MouseHandler.class, "onPress", types, mc.getWindow().getWindow(), GLFW.GLFW_MOUSE_BUTTON_LEFT,
+				down ? GLFW.GLFW_PRESS : GLFW.GLFW_RELEASE, 0);
 	}
 
 	private static void invoke(Object owner, Class<?> declaring, String name, Class<?>[] types, Object... args) {
@@ -228,14 +204,13 @@ final class ClientTest {
 	 */
 	static void createWorld(String baseName) {
 		String name = baseName + "-" + System.currentTimeMillis();
-		waitUntil("the title screen", 2400, mc -> mc.gui.overlay() == null && mc.gui.screen() != null);
+		waitUntil("the title screen", 2400, mc -> mc.getOverlay() == null && mc.screen != null);
 		run(mc -> mc.createWorldOpenFlows().createFreshLevel(name,
-				new LevelSettings(name, GameType.CREATIVE, new LevelSettings.DifficultySettings(Difficulty.PEACEFUL, false, false), true,
-						WorldDataConfiguration.DEFAULT),
+				new LevelSettings(name, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, new GameRules(), WorldDataConfiguration.DEFAULT),
 				new WorldOptions(1L, false, false),
-				registries -> registries.lookupOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
-				mc.gui.screen()));
-		waitUntil("the player in the new world", 2400, mc -> mc.player != null && mc.level != null && mc.gui.screen() == null);
+				registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getOrThrow(WorldPresets.FLAT).createWorldDimensions(),
+				mc.screen));
+		waitUntil("the player in the new world", 2400, mc -> mc.player != null && mc.level != null && mc.screen == null);
 		// Time for the chunks around the player to arrive and draw.
 		waitTicks(60);
 	}

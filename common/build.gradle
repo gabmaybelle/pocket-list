@@ -2,19 +2,24 @@
 // sneak in: only Minecraft, Mixin, the recipe viewers' APIs and the JDK are on the classpath.
 // Nothing here ships as a jar; `fabric` and `neoforge` compile these sources into theirs.
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'fabric-loom' version "${loom_version}"
 }
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	// 1.21.1 ships obfuscated: the code is written in the official Mojang names and Loom remaps.
+	mappings loom.officialMojangMappings()
 	// Only for the Mixin annotations and the launch-side classes they need. No Fabric API here.
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	// Recipe viewers: pin from their screens and borrow their recipes; not bundled or required.
-	// (Modrinth version ids: JEI 31.12.0.65, REI 26.3.824, Cloth Config 26.3.159, Architectury 22.0.5.)
-	compileOnly "maven.modrinth:jei:csqmrfNS"
-	compileOnly "maven.modrinth:rei:rKsAE6bX"
-	compileOnly "maven.modrinth:cloth-config:fg2uyxOW"
-	compileOnly "maven.modrinth:architectury-api:1pMaB6So"
+	// Their NeoForge builds, which use the same Mojang names as this code, so Loom leaves them alone:
+	// remapped here, without Fabric API, a Fabric build came out half-renamed and broke the Fabric
+	// test run that shared the copy. (Modrinth version ids: JEI 19.27.0.346, REI 16.0.799,
+	// Cloth Config 15.0.140, Architectury 13.0.11.)
+	compileOnly "maven.modrinth:jei:eBag7ypX"
+	compileOnly "maven.modrinth:rei:b8gfS9Je"
+	compileOnly "maven.modrinth:cloth-config:izKINKFg"
+	compileOnly "maven.modrinth:architectury-api:1IiqEQGl"
 	compileOnly "me.shedaniel.cloth:basic-math:0.6.1"
 }
 

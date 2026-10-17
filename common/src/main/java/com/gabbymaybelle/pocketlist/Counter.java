@@ -38,13 +38,13 @@ public final class Counter {
 		}
 		Map<Item, Integer> totals = new HashMap<>();
 		Inventory inventory = player.getInventory();
-		for (ItemStack stack : inventory.getNonEquipmentItems()) {
+		for (ItemStack stack : inventory.items) {
 			add(stack, totals, 0);
 		}
 		add(player.getOffhandItem(), totals, 0);
 		AbstractContainerMenu menu = player.containerMenu;
 		add(menu.getCarried(), totals, 0);
-		if (mc.gui.screen() instanceof AbstractContainerScreen<?> screen && screen.getMenu() == menu
+		if (mc.screen instanceof AbstractContainerScreen<?> screen && screen.getMenu() == menu
 				&& !(screen instanceof CreativeModeInventoryScreen)) {
 			// The chest, crafting grid or whatever else is open in front of you (not the creative
 			// item picker: those items aren't really yours).
@@ -77,7 +77,7 @@ public final class Counter {
 	/** A short "all gathered" moment, once, when the last line is ticked off. */
 	private static void celebrate(Minecraft mc, Lists.PocketListData list) {
 		mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME.value(), 1.4F, 0.6F));
-		SystemToast.addOrUpdate(mc.gui.toastManager(), PocketList.FINISHED,
+		SystemToast.addOrUpdate(mc.getToasts(), PocketList.FINISHED,
 				Component.translatable("pocket_list.finished.title"),
 				Component.translatable("pocket_list.finished.text", list.name));
 	}
@@ -93,11 +93,11 @@ public final class Counter {
 		}
 		ItemContainerContents container = stack.get(DataComponents.CONTAINER);
 		if (container != null) {
-			container.nonEmptyItemCopyStream().forEach(inner -> add(inner, into, depth + 1));
+			container.nonEmptyStream().forEach(inner -> add(inner, into, depth + 1));
 		}
 		BundleContents bundle = stack.get(DataComponents.BUNDLE_CONTENTS);
 		if (bundle != null) {
-			bundle.items().forEach(inner -> add(inner.create(), into, depth + 1));
+			bundle.itemCopyStream().forEach(inner -> add(inner, into, depth + 1));
 		}
 	}
 }

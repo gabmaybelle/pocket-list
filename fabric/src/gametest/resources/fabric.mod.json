@@ -5,7 +5,10 @@
 	"name": "Pocket List game tests",
 	"environment": "*",
 	"entrypoints": {
-		"fabric-client-gametest": [
+		"client": [
+			"com.gabbymaybelle.pocketlist.harness.GameTestRunner"
+		],
+		"pocket_list:gametest": [
 			"com.gabbymaybelle.pocketlist.PocketListClientTest",
 			"com.gabbymaybelle.pocketlist.ScreenshotTour"
 		]

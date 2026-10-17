@@ -1,22 +1,22 @@
 package com.gabbymaybelle.pocketlist;
 
-import com.gabbymaybelle.pocketlist.mixin.AbstractRecipeBookScreenAccessor;
-import com.gabbymaybelle.pocketlist.mixin.RecipeBookComponentAccessor;
 import com.gabbymaybelle.pocketlist.compat.Viewers;
+import com.gabbymaybelle.pocketlist.harness.ClientGameTest;
+import com.gabbymaybelle.pocketlist.harness.ClientGameTestContext;
+import com.gabbymaybelle.pocketlist.harness.TestServerContext;
+import com.gabbymaybelle.pocketlist.harness.TestSingleplayerContext;
+import com.gabbymaybelle.pocketlist.harness.TestWorldSave;
+import com.gabbymaybelle.pocketlist.mixin.RecipeBookComponentAccessor;
 import com.mojang.blaze3d.platform.InputConstants;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
-import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
-import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
-import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -31,10 +31,11 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookPage;
 import net.minecraft.client.gui.screens.recipebook.RecipeButton;
+import net.minecraft.client.gui.screens.recipebook.RecipeUpdateListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.inventory.RecipeBookType;
@@ -42,17 +43,17 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Plays through Pocket List in a real game: counting, chest memory, pinning items and recipes,
- * typing in the recipe search, and the list screen. Run with `./gradlew runClientGameTest`;
+ * typing in the recipe search, and the list screen. Run with `./gradlew :fabric:runClientGameTest`;
  * screenshots land in build/run/clientGameTest/screenshots.
  */
-public class PocketListClientTest implements FabricClientGameTest {
+public class PocketListClientTest implements ClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
 		if (ScreenshotTour.enabled()) {
@@ -83,7 +84,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 	}
 
 	private static void play(ClientGameTestContext ctx, TestSingleplayerContext world) {
-		world.getConnection().waitForChunksRender();
+		world.waitForChunksRender();
 		welcome(ctx);
 		TestServerContext server = world.getServer();
 		server.runCommand("gamemode survival @a");
@@ -106,14 +107,14 @@ public class PocketListClientTest implements FabricClientGameTest {
 	}
 
 	private static void playAgain(ClientGameTestContext ctx, TestSingleplayerContext world) {
-		world.getConnection().waitForChunksRender();
+		world.waitForChunksRender();
 		ctx.runOnClient(mc -> {
 			Lists.data().lists.clear();
 			Lists.add(Entry.ofItem(Items.IRON_INGOT, 5));
 		});
 		recount(ctx);
 		expectHave(ctx, "minecraft:iron_ingot", 7);
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.WELCOME)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.WELCOME)) == null,
 				"the welcome toast only shows once");
 		if (FabricLoader.getInstance().isModLoaded("jei") || FabricLoader.getInstance().isModLoaded("roughlyenoughitems")) {
 			recipeViewer(ctx, world.getServer());
@@ -181,7 +182,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 	/** A button on the current screen (searching inside option lists too) whose label contains the text. */
 	private static AbstractWidget widgetNamed(ClientGameTestContext ctx, String text) {
 		return ctx.computeOnClient(mc -> {
-			ArrayDeque<GuiEventListener> queue = new ArrayDeque<>(mc.gui.screen().children());
+			ArrayDeque<GuiEventListener> queue = new ArrayDeque<>(mc.screen.children());
 			while (!queue.isEmpty()) {
 				GuiEventListener child = queue.poll();
 				if (child instanceof AbstractWidget widget && widget.getMessage().getString().contains(text)) {
@@ -198,7 +199,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 	private static void welcome(ClientGameTestContext ctx) {
 		ctx.waitTicks(5);
 		check(ctx.computeOnClient(mc -> Lists.data().welcomed), "the welcome toast is marked as shown");
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.WELCOME)) != null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.WELCOME)) != null,
 				"the welcome toast is showing on first join");
 		ctx.takeScreenshot("pocket_list_welcome");
 	}
@@ -211,8 +212,8 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.getInput().pressKey(PocketList.openKey);
 		ctx.waitForScreen(PocketListScreen.class);
 		// The first line's amount box: click it and type; the old number is replaced.
-		EditBox amount = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
-				.filter(c -> c instanceof EditBox box && box.getX() > mc.gui.screen().width / 2 && box.getY() < 80)
+		EditBox amount = ctx.computeOnClient(mc -> mc.screen.children().stream()
+				.filter(c -> c instanceof EditBox box && box.getX() > mc.screen.width / 2 && box.getY() < 80)
 				.map(c -> (EditBox) c).findFirst().orElse(null));
 		check(amount != null, "each line has an amount box");
 		click(ctx, amount.getX() + 5, amount.getY() + 5);
@@ -222,14 +223,14 @@ public class PocketListClientTest implements FabricClientGameTest {
 		check(ctx.computeOnClient(mc -> amount.getValue()).equals("200"), "letters are ignored in the amount box");
 
 		// The amount next to the search box sets how many a result adds.
-		EditBox addAmount = ctx.computeOnClient(mc -> (EditBox) field(mc.gui.screen(), PocketListScreen.class, "amountBox"));
+		EditBox addAmount = ctx.computeOnClient(mc -> (EditBox) field(mc.screen, PocketListScreen.class, "amountBox"));
 		click(ctx, addAmount.getX() + 5, addAmount.getY() + 5);
 		ctx.getInput().typeChars("12");
-		EditBox search = ctx.computeOnClient(mc -> (EditBox) field(mc.gui.screen(), PocketListScreen.class, "searchBox"));
+		EditBox search = ctx.computeOnClient(mc -> (EditBox) field(mc.screen, PocketListScreen.class, "searchBox"));
 		click(ctx, search.getX() + 5, search.getY() + 5);
 		ctx.getInput().typeChars("lantern");
 		ctx.waitTicks(2);
-		int[] lantern = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
+		int[] lantern = ctx.computeOnClient(mc -> mc.screen.children().stream()
 				.filter(c -> c instanceof PocketListScreen.ItemButton b && b.getMessage().getString().equals("Add Lantern"))
 				.map(c -> (AbstractWidget) c).map(w -> new int[] { w.getX() + 9, w.getY() + 9 }).findFirst().orElse(null));
 		check(lantern != null, "searching \"lantern\" finds the Lantern");
@@ -247,13 +248,13 @@ public class PocketListClientTest implements FabricClientGameTest {
 	private static void breakDown(ClientGameTestContext ctx, TestServerContext server) {
 		// Like a brand-new player: no recipes unlocked. In single player the world still knows them all.
 		server.runCommand("recipe take @a *");
-		ctx.waitFor(mc -> mc.player.getRecipeBook().getCollections().stream().allMatch(c -> c.getRecipes().isEmpty()));
+		ctx.waitFor(mc -> mc.level.getRecipeManager().getRecipes().stream().noneMatch(r -> mc.player.getRecipeBook().contains(r)));
 		// A lantern has one recipe, so it's replaced straight away.
 		give(ctx, server, Items.LANTERN, 2);
-		ctx.runOnClient(mc -> ((PocketListScreen) mc.gui.screen()).changed());
+		ctx.runOnClient(mc -> ((PocketListScreen) mc.screen).changed());
 		expectHave(ctx, "minecraft:lantern", 2);
 		clickBreakDown(ctx, 1);
-		check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof PocketListScreen), "one recipe needs no choosing");
+		check(ctx.computeOnClient(mc -> mc.screen instanceof PocketListScreen), "one recipe needs no choosing");
 		// Two lanterns are already in the inventory, so only ten more are made.
 		expectNeed(ctx, "minecraft:iron_nugget", 80);
 		expectNeed(ctx, "minecraft:torch", 10);
@@ -265,7 +266,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.runOnClient(mc -> {
 			Lists.active().entries.clear();
 			Lists.add(Entry.ofItem(Items.IRON_INGOT, 9));
-			((PocketListScreen) mc.gui.screen()).changed();
+			((PocketListScreen) mc.screen).changed();
 		});
 		// The iron in the chests from earlier counts, so fewer are needed.
 		int haveIron = entry(ctx, "minecraft:iron_ingot").have();
@@ -281,7 +282,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		check(recipes.size() >= 2, "iron ingots have several recipes");
 		FoundRecipe first = recipes.getFirst();
 		check(!(first.makes() == 9 && first.ingredients().size() == 1), "unpacking an iron block isn't offered first");
-		int[] firstRow = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
+		int[] firstRow = ctx.computeOnClient(mc -> mc.screen.children().stream()
 				.filter(c -> c.getClass().getSimpleName().equals("RecipeRow")).map(c -> (AbstractWidget) c)
 				.map(w -> new int[] { w.getX() + 40, w.getY() + 10 }).findFirst().orElse(null));
 		click(ctx, firstRow[0], firstRow[1]);
@@ -297,7 +298,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 	}
 
 	private static void clickBreakDown(ClientGameTestContext ctx, int row) {
-		int[] at = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
+		int[] at = ctx.computeOnClient(mc -> mc.screen.children().stream()
 				.filter(c -> c instanceof PocketListScreen.ItemButton b && b.getMessage().getString().startsWith("Break down"))
 				.map(c -> (AbstractWidget) c).skip(row).map(w -> new int[] { w.getX() + 9, w.getY() + 9 }).findFirst().orElse(null));
 		check(at != null, "line " + row + " has a Break down button");
@@ -307,22 +308,22 @@ public class PocketListClientTest implements FabricClientGameTest {
 
 	private static void finishedToast(ClientGameTestContext ctx, TestServerContext server) {
 		ctx.runOnClient(mc -> {
-			mc.gui.toastManager().clear();
+			mc.getToasts().clear();
 			Lists.active().entries.clear();
 			Lists.add(Entry.ofItem(Items.DIAMOND, 2));
 		});
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.FINISHED)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) == null,
 				"no celebration before it's done");
 		give(ctx, server, Items.DIAMOND, 2);
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.FINISHED)) != null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) != null,
 				"a toast when the last line is gathered");
 		ctx.takeScreenshot("pocket_list_finished");
 		recount(ctx);
-		ctx.runOnClient(mc -> mc.gui.toastManager().clear());
+		ctx.runOnClient(mc -> mc.getToasts().clear());
 		recount(ctx);
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.FINISHED)) == null,
+		check(ctx.computeOnClient(mc -> mc.getToasts().getToast(SystemToast.class, PocketList.FINISHED)) == null,
 				"the celebration happens once, not on every count");
 	}
 
@@ -333,14 +334,14 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.waitTicks(20);
 		// Find an item in the viewer's list by moving the mouse over the right-hand side of the screen
 		// (the viewers read the real mouse position).
-		int width = ctx.computeOnClient(mc -> mc.gui.screen().width);
-		int height = ctx.computeOnClient(mc -> mc.gui.screen().height);
+		int width = ctx.computeOnClient(mc -> mc.screen.width);
+		int height = ctx.computeOnClient(mc -> mc.screen.height);
 		boolean found = false;
 		for (int y = 30; y < height - 30 && !found; y += 18) {
 			for (int x = width - 12; x > width / 2 + 100 && !found; x -= 18) {
 				ctx.getInput().setCursorPos(x * scale(ctx), y * scale(ctx));
 				ctx.waitTick();
-				found = !ctx.computeOnClient(mc -> Pins.hoveredItem(mc, mc.gui.screen())).isEmpty();
+				found = !ctx.computeOnClient(mc -> Pins.hoveredItem(mc, mc.screen)).isEmpty();
 			}
 		}
 		check(found, "the recipe viewer's item list is on screen");
@@ -387,16 +388,30 @@ public class PocketListClientTest implements FabricClientGameTest {
 		give(ctx, server, Items.OAK_LOG, 6);
 		give(ctx, server, Items.SPRUCE_LOG, 6);
 		give(ctx, server, Items.STICK, 3);
-		server.runCommand("give @a bundle[bundle_contents=[{id:\"minecraft:torch\",count:10}]]");
+		// Bundles are an experiment on 1.21.1 that this world doesn't have, so the torches come in a
+		// shulker box; a bundle is checked on its own below.
+		server.runCommand("give @a orange_shulker_box[container=[{slot:0,item:{id:\"minecraft:torch\",count:10}}]]");
 		server.runCommand("give @a white_shulker_box[container=[{slot:0,item:{id:\"minecraft:cobblestone\",count:64}}]]");
 		// On a slow computer the items take a few ticks to reach the player's game.
-		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.BUNDLE) >= 1 && mc.player.getInventory().countItem(BuiltInRegistries.ITEM.getOptional(Identifier.parse("minecraft:white_shulker_box")).orElseThrow()) >= 1);
+		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.ORANGE_SHULKER_BOX) >= 1 && mc.player.getInventory().countItem(Items.WHITE_SHULKER_BOX) >= 1);
 		recount(ctx);
 		expectHave(ctx, "#minecraft:logs", 12);
 		expectHave(ctx, "minecraft:stick", 3);
 		expectHave(ctx, "minecraft:torch", 10);
 		expectHave(ctx, "minecraft:cobblestone", 64);
 		expectHave(ctx, "minecraft:iron_ingot", 0);
+		// What's in a bundle counts too, and a bundle in a shulker box.
+		int inBundles = ctx.computeOnClient(mc -> {
+			ItemStack bundle = new ItemStack(Items.BUNDLE);
+			bundle.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStack(Items.TORCH, 7))));
+			ItemStack box = new ItemStack(Items.WHITE_SHULKER_BOX);
+			box.set(DataComponents.CONTAINER, net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(bundle.copy())));
+			Map<Item, Integer> totals = new HashMap<>();
+			Counter.add(bundle, totals, 0);
+			Counter.add(box, totals, 0);
+			return totals.getOrDefault(Items.TORCH, 0);
+		});
+		check(inBundles == 14, "torches in a bundle, and in a bundle in a shulker box: expected 14, counted " + inBundles);
 		ctx.takeScreenshot("pocket_list_hud");
 	}
 
@@ -421,42 +436,34 @@ public class PocketListClientTest implements FabricClientGameTest {
 		openAndClose(ctx, ender, ContainerScreen.class);
 		expectHave(ctx, "minecraft:iron_ingot", 4);
 
-		// A shelf holds things without opening a screen. Using it with ingots in hand puts them on
-		// it, and the shelf is remembered through its item storage (the same way a canister from
-		// another mod would be).
-		BlockPos shelf = here.offset(2, 0, 2);
-		server.runCommand(setblock(shelf, "oak_shelf[facing=north]"));
-		server.runCommand("item replace entity @a hotbar.8 with iron_ingot 2");
-		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) == 2);
-		ctx.runOnClient(mc -> mc.player.getInventory().setSelectedSlot(8));
+		// A decorated pot holds things without opening a screen, and the game tells every player what's
+		// in it when its chunk loads (or a command changes it). Using it with an empty hand only
+		// wobbles it; it's remembered through its item storage (the same way a modded jar would be).
+		BlockPos pot = here.offset(2, 0, 2);
+		String at = pot.getX() + " " + pot.getY() + " " + pot.getZ();
+		server.runCommand(setblock(pot, "decorated_pot{item:{id:\"minecraft:iron_ingot\",count:2}}"));
+		server.runCommand("item replace entity @a hotbar.8 with air");
+		ctx.runOnClient(mc -> mc.player.getInventory().selected = 8);
 		world(ctx);
-		// The middle of the shelf's front.
-		ctx.runOnClient(mc -> mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND,
-				new BlockHitResult(Vec3.atCenterOf(shelf).add(0, 0, -0.5), Direction.NORTH, shelf, false)));
-		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) < 2);
-		int inHand = ctx.computeOnClient(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT));
-		ctx.waitTicks(ChestMemory.STORAGE_WAIT + 5);
 		recount(ctx);
-		// Four in the chests, and the two ingots split between the hand and the shelf.
+		// Not used yet: nothing from the pot counts.
+		expectHave(ctx, "minecraft:iron_ingot", 4);
+		useBlock(ctx, pot);
+		ctx.waitTicks(ChestMemory.STORAGE_WAIT + 5);
+		check(ctx.computeOnClient(mc -> mc.screen) == null, "a decorated pot opens no screen");
+		recount(ctx);
+		// Four in the chests and two in the pot.
 		expectHave(ctx, "minecraft:iron_ingot", 6);
 		ctx.runOnClient(mc -> Lists.data().countChests = false);
 		recount(ctx);
-		expectHave(ctx, "minecraft:iron_ingot", inHand);
+		expectHave(ctx, "minecraft:iron_ingot", 0);
 		ctx.runOnClient(mc -> Lists.data().countChests = true);
-		// Shelves tell every game what they hold, so when something else changes it (a hopper, say)
-		// the count follows without using it again.
-		String at = shelf.getX() + " " + shelf.getY() + " " + shelf.getZ();
-		server.runCommand("item replace block " + at + " container.0 with iron_ingot 3");
-		server.runCommand("item replace block " + at + " container.1 with air");
-		server.runCommand("item replace block " + at + " container.2 with air");
+		// When the game is told the pot changed, the count follows without using it again.
+		server.runCommand("data merge block " + at + " {item:{id:\"minecraft:iron_ingot\",count:3}}");
 		world(ctx);
 		recount(ctx);
-		expectHave(ctx, "minecraft:iron_ingot", 7 + inHand);
-		server.runCommand("clear @a iron_ingot");
-		ctx.waitFor(mc -> mc.player.getInventory().countItem(Items.IRON_INGOT) == 0);
-		ctx.runOnClient(mc -> mc.player.getInventory().setSelectedSlot(0));
-		recount(ctx);
 		expectHave(ctx, "minecraft:iron_ingot", 7);
+		ctx.runOnClient(mc -> mc.player.getInventory().selected = 0);
 	}
 
 	private static void creativePickerDoesNotCount(ClientGameTestContext ctx, TestServerContext server) {
@@ -467,7 +474,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.waitTicks(2);
 		// Something the creative tab shows that you don't own.
 		String shown = ctx.computeOnClient(mc -> {
-			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.gui.screen();
+			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.screen;
 			for (Slot slot : screen.getMenu().slots) {
 				ItemStack stack = slot.getItem();
 				if (!stack.isEmpty() && mc.player.getInventory().countItem(stack.getItem()) == 0) {
@@ -503,10 +510,9 @@ public class PocketListClientTest implements FabricClientGameTest {
 		// The first recipe on the page, and what pinning it should add.
 		RecipeButton button = ctx.computeOnClient(mc -> visibleRecipeButtons(mc).getFirst());
 		Map<String, Integer> expected = ctx.computeOnClient(mc -> {
-			RecipeDisplayEntry recipe = button.getCollection().getRecipes().stream()
-					.filter(r -> r.id().equals(button.getCurrentRecipe())).findFirst().orElseThrow();
+			RecipeHolder<?> recipe = button.getRecipe();
 			Map<String, Integer> out = new HashMap<>();
-			for (Entry e : Pins.ingredients(recipe.display(), SlotDisplayContext.fromLevel(mc.level))) {
+			for (Entry e : Pins.ingredients(recipe.value())) {
 				out.put(e.key(), e.need);
 			}
 			return out;
@@ -532,7 +538,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 			// With REI installed, a click there doesn't focus the vanilla search box (REI's doing, not
 			// Pocket List's, which doesn't handle clicks). Focus it directly: the point is the typing.
 			ctx.runOnClient(mc -> {
-				mc.gui.screen().setFocused(recipeBook(mc));
+				mc.screen.setFocused(recipeBook(mc));
 				search.setFocused(true);
 			});
 		}
@@ -556,13 +562,13 @@ public class PocketListClientTest implements FabricClientGameTest {
 		check(ctx.computeOnClient(mc -> Lists.active().entries.isEmpty()), "the new list starts empty");
 		ctx.takeScreenshot("pocket_list_empty");
 
-		EditBox search = ctx.computeOnClient(mc -> (EditBox) field(mc.gui.screen(), PocketListScreen.class, "searchBox"));
+		EditBox search = ctx.computeOnClient(mc -> (EditBox) field(mc.screen, PocketListScreen.class, "searchBox"));
 		click(ctx, search.getX() + 5, search.getY() + 5);
 		ctx.getInput().typeChars("glass pane");
 		ctx.waitTicks(2);
 		ctx.takeScreenshot("pocket_list_search");
 		// Click the first result.
-		int[] at = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
+		int[] at = ctx.computeOnClient(mc -> mc.screen.children().stream()
 				.filter(c -> c.getClass().getSimpleName().equals("ItemButton"))
 				.map(c -> (AbstractWidget) c)
 				.map(w -> new int[] { w.getX() + 9, w.getY() + 9 }).findFirst().orElse(null));
@@ -583,9 +589,9 @@ public class PocketListClientTest implements FabricClientGameTest {
 		check(ctx.computeOnClient(mc -> Lists.active().name).equals("Cottage"), "back on the first list");
 
 		// The open key closes it again (the search box isn't focused after a rebuild by a button).
-		ctx.runOnClient(mc -> mc.gui.screen().clearFocus());
+		ctx.runOnClient(mc -> mc.screen.clearFocus());
 		ctx.getInput().pressKey(PocketList.openKey);
-		ctx.waitFor(mc -> mc.gui.screen() == null);
+		ctx.waitFor(mc -> mc.screen == null);
 	}
 
 	private static void saving(ClientGameTestContext ctx) {
@@ -597,7 +603,21 @@ public class PocketListClientTest implements FabricClientGameTest {
 	}
 
 	private static void savingOrThrow(ClientGameTestContext ctx) throws IOException {
-		ctx.<IOException>runOnClient(mc -> {
+		IOException[] failed = { null };
+		ctx.runOnClient(mc -> {
+			try {
+				savingOnClient();
+			} catch (IOException e) {
+				failed[0] = e;
+			}
+		});
+		if (failed[0] != null) {
+			throw failed[0];
+		}
+	}
+
+	private static void savingOnClient() throws IOException {
+		{
 			Path file = FabricLoader.getInstance().getConfigDir().resolve("pocket_list.json");
 			int entries = Lists.active().entries.size();
 			Lists.save();
@@ -626,7 +646,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 			check(Files.readString(file).equals(good), "an interrupted save leaves the lists file as it was");
 			Lists.save();
 			check(!Files.exists(file.resolveSibling("pocket_list.json.tmp")), "the next save leaves no temporary file behind");
-		});
+		}
 	}
 
 	// ------------------------------------------------------------------ helpers
@@ -674,7 +694,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 
 	private static void hoverSlotWith(ClientGameTestContext ctx, Item item) {
 		int[] at = ctx.computeOnClient(mc -> {
-			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.gui.screen();
+			AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) mc.screen;
 			int left = (int) field(screen, AbstractContainerScreen.class, "leftPos");
 			int top = (int) field(screen, AbstractContainerScreen.class, "topPos");
 			for (Slot slot : screen.getMenu().slots) {
@@ -691,10 +711,10 @@ public class PocketListClientTest implements FabricClientGameTest {
 	/** Closes the screen the way Esc does, so the server knows a container was closed. */
 	private static void close(ClientGameTestContext ctx) {
 		ctx.runOnClient(mc -> {
-			if (mc.gui.screen() instanceof AbstractContainerScreen<?>) {
+			if (mc.screen instanceof AbstractContainerScreen<?>) {
 				mc.player.closeContainer();
 			} else {
-				mc.gui.setScreen(null);
+				mc.setScreen(null);
 			}
 		});
 		ctx.waitTick();
@@ -717,8 +737,8 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.waitTick();
 	}
 
-	private static RecipeBookComponent<?> recipeBook(Minecraft mc) {
-		return ((AbstractRecipeBookScreenAccessor) mc.gui.screen()).pocketList$recipeBook();
+	private static RecipeBookComponent recipeBook(Minecraft mc) {
+		return ((RecipeUpdateListener) mc.screen).getRecipeBookComponent();
 	}
 
 	@SuppressWarnings("unchecked")

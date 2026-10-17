@@ -3,14 +3,14 @@ package com.gabbymaybelle.pocketlist.compat;
 import com.gabbymaybelle.pocketlist.PocketList;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.runtime.IJeiRuntime;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 /** JEI hands its runtime over here. Only JEI loads this class. */
 @mezz.jei.api.JeiPlugin
 public class JeiPlugin implements IModPlugin {
 	@Override
-	public Identifier getPluginUid() {
-		return Identifier.fromNamespaceAndPath(PocketList.MOD_ID, "jei");
+	public ResourceLocation getPluginUid() {
+		return ResourceLocation.fromNamespaceAndPath(PocketList.MOD_ID, "jei");
 	}
 
 	@Override
