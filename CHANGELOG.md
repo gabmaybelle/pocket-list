@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Paste List** makes a new list from text you've copied: one item per line with how many, such as "64 oak planks", "Torches x16" or "minecraft:glass_pane 8". Lines it can't match to an item are named in a message, never guessed.
+- **Copy List** copies the list as text, one line per item, to keep in your notes or paste into a friend's Pocket List.
+- **From Litematica** makes a new list from Litematica's newest material list (its Write to file button, as a table or a .csv), named after the schematic, with each item's total. The button shows when Litematica is installed.
+
 ## 0.2.0+1.20.1
 
 Pocket List for Minecraft 1.20.1, on Fabric and Forge: the same mod as 0.2.0 for 26.x and 0.2.0+1.21.1, with the HUD checklist, the list and settings screens, pinning with Z from inventories, the recipe book, JEI and REI, Break down, and chest memory. What's different on 1.20.1, all down to the game itself:

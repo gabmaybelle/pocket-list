@@ -103,6 +103,7 @@ public class PocketListClientTest implements ClientGameTest {
 		pinRecipe(ctx);
 		typingInRecipeSearchDoesNotPin(ctx);
 		listScreen(ctx);
+		listsAsText(ctx);
 		typedAmounts(ctx);
 		breakDown(ctx, server);
 		finishedToast(ctx, server);
@@ -611,6 +612,112 @@ public class PocketListClientTest implements ClientGameTest {
 		ctx.runOnClient(mc -> mc.screen.setFocused(null));
 		ctx.getInput().pressKey(PocketList.openKey);
 		ctx.waitFor(mc -> mc.screen == null);
+	}
+
+	/** Litematica's material list as its Write to file button writes it: a table, with each row's Total. */
+	static final String LITEMATICA_TABLE = """
+			+--------------------------------------------------------------------------+
+			| Cottage roof                                                             |
+			+--------------------------------------------------------------------------+
+			| Item          | Total | Missing | Available | Total (sb) | Missing (sb) |
+			+---------------+-------+---------+-----------+------------+--------------+
+			| Oak Planks    |   320 |     300 |        20 |    0.19 SB |      0.17 SB |
+			| Glass Pane    |    48 |      48 |         0 |    0.03 SB |      0.03 SB |
+			| Mystery Block |     5 |       5 |         0 |    0.00 SB |      0.00 SB |
+			+---------------+-------+---------+-----------+------------+--------------+
+			""";
+	/** The same with Shift held: a .csv. */
+	static final String LITEMATICA_CSV = """
+			"Item","Total","Missing","Available","Total (sb)","Missing (sb)"
+			"Oak Planks",320,300,20,"0.19 SB","0.17 SB"
+			"Glass Pane",48,48,0,"0.03 SB","0.03 SB"
+			""";
+	/** A list from a notes app or a video description. */
+	static final String TYPED = """
+			- [ ] 64 oak planks
+			Torches x16
+			minecraft:glass_pane: 8
+			#minecraft:logs 10
+			3 nonsense thing
+			""";
+
+	/** Paste List, Copy List and From Litematica on the list screen, and the text they read and write. */
+	private static void listsAsText(ClientGameTestContext ctx) {
+		ctx.runOnClient(mc -> {
+			ListText.Result table = ListText.read(LITEMATICA_TABLE, mc.level.enabledFeatures());
+			check("Cottage roof".equals(table.title()), "a Litematica table's schematic name becomes the list's name (got " + table.title() + ")");
+			check(needsOf(table).equals(Map.of("minecraft:oak_planks", 320, "minecraft:glass_pane", 48)),
+					"a Litematica table gives each item's Total: " + needsOf(table));
+			check(table.unknown().equals(List.of("Mystery Block")), "a name that's no item is handed back, not guessed: " + table.unknown());
+			ListText.Result csv = ListText.read(LITEMATICA_CSV, mc.level.enabledFeatures());
+			check(needsOf(csv).equals(Map.of("minecraft:oak_planks", 320, "minecraft:glass_pane", 48)) && csv.unknown().isEmpty(),
+					"a Litematica .csv reads the same: " + needsOf(csv) + " " + csv.unknown());
+			ListText.Result typed = ListText.read(TYPED, mc.level.enabledFeatures());
+			check(needsOf(typed).equals(Map.of("minecraft:oak_planks", 64, "minecraft:torch", 16, "minecraft:glass_pane", 8, "#minecraft:logs", 10)),
+					"typed lines read with the amount first or last, by name, id or tag: " + needsOf(typed));
+			check(typed.unknown().equals(List.of("nonsense thing")), "typed lines hand back what's no item: " + typed.unknown());
+		});
+
+		// Paste List makes a new list from the clipboard.
+		ctx.getInput().pressKey(PocketList.openKey);
+		ctx.waitForScreen(PocketListScreen.class);
+		int lists = ctx.computeOnClient(mc -> Lists.data().lists.size());
+		ctx.runOnClient(mc -> mc.keyboardHandler.setClipboard(TYPED));
+		ctx.clickScreenButton("Paste List");
+		check(ctx.computeOnClient(mc -> Lists.data().lists.size()) == lists + 1, "Paste List makes a new list");
+		check(needs(ctx).equals(Map.of("minecraft:oak_planks", 64, "minecraft:torch", 16, "minecraft:glass_pane", 8, "#minecraft:logs", 10)),
+				"the pasted list has the pasted lines: " + needs(ctx));
+		check(ctx.computeOnClient(mc -> ((net.minecraft.network.chat.Component) field(mc.screen, PocketListScreen.class, "message")).getString()).contains("nonsense thing"),
+				"the message names the line that wasn't recognised");
+		ctx.takeScreenshot("pocket_list_pasted");
+
+		// Copy List writes it out, and the copy pastes back as the same list.
+		ctx.clickScreenButton("Copy List");
+		Map<String, Integer> copied = ctx.computeOnClient(mc -> needsOf(ListText.read(mc.keyboardHandler.getClipboard(), mc.level.enabledFeatures())));
+		check(copied.equals(needs(ctx)), "Copy List's text pastes back as the same list: " + copied);
+
+		// From Litematica appears once Litematica has written a material list, and reads the newest.
+		check(ctx.computeOnClient(mc -> mc.screen.children().stream().noneMatch(c -> c instanceof AbstractWidget w
+				&& w.getMessage().getString().equals("From Litematica"))), "no From Litematica button without Litematica");
+		Path folder = FabricLoader.getInstance().getConfigDir().resolve("litematica");
+		try {
+			Files.createDirectories(folder);
+			Path old = folder.resolve("material_list_2026-01-01_10.00.00.txt");
+			Files.writeString(old, "| Item | Total |\n| Stone | 1 |\n");
+			Files.setLastModifiedTime(old, java.nio.file.attribute.FileTime.fromMillis(System.currentTimeMillis() - 60_000));
+			Files.writeString(folder.resolve("material_list_2026-10-17_12.00.00.txt"), LITEMATICA_TABLE);
+			ctx.runOnClient(mc -> mc.setScreen(new PocketListScreen(null)));
+			ctx.waitForScreen(PocketListScreen.class);
+			ctx.clickScreenButton("From Litematica");
+			check(ctx.computeOnClient(mc -> Lists.active().name).equals("Cottage roof"), "From Litematica names the list after the schematic");
+			check(needs(ctx).equals(Map.of("minecraft:oak_planks", 320, "minecraft:glass_pane", 48)), "From Litematica reads the newest list: " + needs(ctx));
+			ctx.takeScreenshot("pocket_list_litematica");
+			try (var files = Files.list(folder)) {
+				for (Path file : files.toList()) {
+					Files.delete(file);
+				}
+			}
+			Files.delete(folder);
+		} catch (IOException e) {
+			throw new AssertionError(e);
+		}
+
+		// Back to the one list the later checks expect.
+		ctx.runOnClient(mc -> {
+			Lists.data().lists.subList(lists, Lists.data().lists.size()).clear();
+			Lists.data().active = 0;
+			Lists.save();
+			mc.setScreen(null);
+		});
+		ctx.waitTick();
+	}
+
+	private static Map<String, Integer> needsOf(ListText.Result result) {
+		Map<String, Integer> out = new HashMap<>();
+		for (Entry e : result.entries()) {
+			out.merge(e.key(), e.need, Integer::sum);
+		}
+		return out;
 	}
 
 	private static void saving(ClientGameTestContext ctx) {
