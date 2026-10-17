@@ -58,5 +58,18 @@
 	"pocket_list.chooser.hint": "Click a recipe to put its ingredients on your list.",
 	"pocket_list.chooser.makes": "makes %s",
 	"pocket_list.screen.amount": "Amount",
-	"pocket_list.recipe.or": "%s (or %s)"
+	"pocket_list.recipe.or": "%s (or %s)",
+	"pocket_list.screen.paste": "Paste List",
+	"pocket_list.screen.paste.tooltip": "Make a new list from text you've copied: one item per line with how many, such as \"64 oak planks\"",
+	"pocket_list.screen.copy": "Copy List",
+	"pocket_list.screen.copy.tooltip": "Copy this list as text, one line per item, to paste anywhere or into a friend's Pocket List",
+	"pocket_list.screen.import": "From Litematica",
+	"pocket_list.screen.import.tooltip": "Make a new list from Litematica's newest exported material list (its Write to file button)",
+	"pocket_list.screen.import.none": "Export a material list in Litematica first: open its material list and press Write to file.",
+	"pocket_list.screen.litematica_name": "Litematica list",
+	"pocket_list.screen.pasted": "Made a new list with %s lines.",
+	"pocket_list.screen.pasted_unknown": "Made a new list with %s lines. Not recognised: %s",
+	"pocket_list.screen.paste_nothing": "Nothing to paste: copy some lines first, one item per line with how many.",
+	"pocket_list.screen.paste_none_known": "No items recognised in that text: %s",
+	"pocket_list.screen.copied": "Copied %s lines."
 }

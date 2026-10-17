@@ -104,6 +104,23 @@ public final class Lists {
 	}
 
 	/**
+	 * A new list with these lines (the same item twice becomes one line), switched to. Named
+	 * {@code name}, or "List N" when that's null or blank.
+	 */
+	public static PocketListData addList(String name, List<Entry> entries) {
+		PocketListData list = newList(data.lists.size() + 1);
+		if (name != null && !name.isBlank()) {
+			list.name = name.strip().length() > 40 ? name.strip().substring(0, 40) : name.strip();
+		}
+		for (Entry entry : entries) {
+			topUp(list.entries, entry, list.entries.size());
+		}
+		data.lists.add(list);
+		data.active = data.lists.size() - 1;
+		return list;
+	}
+
+	/**
 	 * Tops up the line with this entry's key, or puts the entry in at {@code index} when there's no
 	 * such line. Either way the line is highlighted on the HUD for a moment. True if a line was added.
 	 */
