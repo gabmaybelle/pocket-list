@@ -2,6 +2,8 @@
 
 A little checklist in the corner of your screen for the things you're gathering.
 
+▶ [See it in action: a 36-second video](https://www.youtube.com/shorts/l2mbjTvYLyE)
+
 I kept losing track halfway through a build. I'd head out for logs, come back with logs, and realize I'd forgotten the glass. Pocket List keeps the list for you and ticks things off as you collect them.
 
 ## Getting started
