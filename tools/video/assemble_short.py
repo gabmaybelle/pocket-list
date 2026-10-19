@@ -2,31 +2,41 @@
 pocket-list-short-silent.mp4 (for adding music) and pocket-list-short-cover.png.
 
 python3 -I assemble_short.py <video_short dir> <sounds dir> <out dir>
-(set CHROME to a Chrome or Chromium binary if it isn't the default; sounds from get_sounds.py)
+(sounds from get_sounds.py; set CAPTION_FONT to a heavy font file if none of the usual ones is found)
 
-Each scene's caption is drawn on the footage below the HUD (which keeps its top-left corner),
-clear of the Shorts title and buttons along the bottom and right edge.
+Captions are short, bold white words with a black outline straight on the footage, one word in the
+list's green, in the middle band: clear of the top edge, the Shorts title along the bottom and the
+buttons down the right. A small Pocket List badge stays in one place all the way through. There is
+no end card: the last scene is back where the first began, so a replay loops.
 """
-import csv, html, os, random, shutil, subprocess, sys
-from PIL import Image, ImageDraw
+import csv, os, random, shutil, subprocess, sys
+from PIL import Image, ImageDraw, ImageFont
 
 frames_dir, sounds_dir, out = sys.argv[1:4]
 FPS = 20
 W, H = 1080, 1920
-CHROME = os.environ.get('CHROME', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome')
 repo = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
-# Scene, caption. Change a caption here if its scene in VideoShort changes.
+GREEN = (124, 252, 106)
+# Scene, caption lines ("*word*" is drawn green), and where the caption's top sits. Change a caption
+# here if its scene in VideoShort changes. The chest's screen fills the middle, so its caption sits above it.
 SCENES = [
-    ('hook', 'Never forget what you came for'),
-    ('list', 'Your gathering list, always on screen'),
-    ('breakdown', 'Breaks recipes into raw materials'),
-    ('paste', 'Paste a list from your notes'),
-    ('litematica', 'Turns a Litematica schematic into your list'),
-    ('pin', 'Pin anything with Z'),
-    ('chest', 'Remembers your chests'),
-    ('outro', None),
+    ('hook', ['YOUR *BUILD* LIST', 'TICKS ITSELF OFF'], 820),
+    ('list', ['PRESS *K*,', 'ADD ANYTHING'], 860),
+    ('breakdown', ['*BREAK DOWN*', 'ANY RECIPE'], 860),
+    ('litematica', ['YOUR *SCHEMATIC*,', 'AS A LIST'], 860),
+    ('chest', ['COUNTS YOUR', '*CHESTS* TOO'], 300),
+    ('loop', None, 0),
 ]
-END_SECONDS = 2.5
+FONTS = [os.environ.get('CAPTION_FONT', ''), 'C:/Windows/Fonts/ariblk.ttf', '/usr/share/fonts/truetype/msttcorefonts/Arial_Black.ttf',
+         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']
+BADGE_FONTS = [os.environ.get('BADGE_FONT', ''), 'C:/Windows/Fonts/segoeuib.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf']
+
+def font(paths, size):
+    for p in paths:
+        if p and os.path.exists(p):
+            return ImageFont.truetype(p, size)
+    sys.exit('no caption font found; set CAPTION_FONT')
+
 work = os.path.join(out, 'work')
 shutil.rmtree(work, ignore_errors=True)
 os.makedirs(work)
@@ -34,40 +44,41 @@ os.makedirs(work)
 def run(*args):
     subprocess.run(args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
-STYLE = """
-* { margin:0; box-sizing:border-box; }
-html,body { width:%dpx; height:%dpx; overflow:hidden; background:transparent; }
-body { font-family:'Inter','Segoe UI',sans-serif; display:flex; justify-content:center; align-items:flex-start; }
-.cap { margin-top:%dpx; max-width:880px; background:rgba(239,230,210,.94); color:#3f3427; border-radius:28px;
-  padding:30px 44px; font-weight:800; font-size:64px; line-height:1.1; letter-spacing:-1px; text-align:center;
-  box-shadow:0 14px 40px rgba(0,0,0,.4); }
-.end { width:100%%; height:100%%; background:#2b241d; flex-direction:column; align-items:center; justify-content:center; gap:40px; display:flex; }
-.end img { width:260px; height:260px; image-rendering:pixelated; }
-.end h1 { color:#f3ead7; font-size:110px; font-weight:800; letter-spacing:-2px; }
-.end p { color:#e4d8be; font-size:46px; font-weight:600; text-align:center; line-height:1.45; }
-.end .g { color:#7bc35f; }
-"""
+MAX_WIDTH = 880  # a caption line, so it keeps clear of the buttons down the right
 
-# Where each caption's top sits: below the HUD in the world, and in the empty middle of the list
-# screen (whose lines are near the top) for the scenes filmed on it.
-SCREEN_SCENES = {'list', 'breakdown', 'paste', 'litematica'}
+def caption(lines, top):
+    """A transparent frame-sized layer with the caption lines, centred; the size shrinks to fit the longest line."""
+    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    size = 84
+    while size > 48 and max(d.textlength(l.replace('*', ''), font=font(FONTS, size)) for l in lines) > MAX_WIDTH:
+        size -= 2
+    CAPTION = font(FONTS, size)
+    y = top
+    for line in lines:
+        parts = [(p, GREEN if i % 2 else (255, 255, 255)) for i, p in enumerate(line.split('*')) if p]
+        x = (W - sum(d.textlength(p, font=CAPTION) for p, _ in parts)) / 2
+        for text, colour in parts:
+            d.text((x, y), text, font=CAPTION, fill=colour, stroke_width=max(5, size // 12), stroke_fill=(0, 0, 0))
+            x += d.textlength(text, font=CAPTION)
+        y += int(size * 1.24)
+    return layer
 
-def shot(name, body, transparent, top=300):
-    path = os.path.join(work, name + '.html')
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write('<!doctype html><html><head><meta charset=utf-8><style>' + STYLE % (W, H, top) + '</style></head><body>' + body + '</body></html>')
-    png = os.path.join(work, name + '.png')
-    extra = ['--default-background-color=00000000'] if transparent else []
-    run(CHROME, '--headless', '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1', *extra,
-        f'--window-size={W},{H}', '--screenshot=' + png, 'file:///' + path.replace('\\', '/'))
-    return Image.open(png).convert('RGBA')
+def badge():
+    """A small mod-list style badge: the icon, the name, the loaders."""
+    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    box = (300, 1390, 780, 1490)
+    d.rounded_rectangle(box, 18, fill=(20, 20, 24, 225))
+    icon = Image.open(os.path.join(repo, 'common/src/main/resources/assets/pocket_list/icon.png')).convert('RGBA')
+    icon = icon.resize((72, 72), Image.NEAREST)
+    layer.alpha_composite(icon, (box[0] + 16, box[1] + 14))
+    d.text((box[0] + 104, box[1] + 12), 'Pocket List', font=font(BADGE_FONTS, 40), fill=(255, 255, 255))
+    d.text((box[0] + 104, box[1] + 60), 'Fabric · NeoForge · Forge', font=font(BADGE_FONTS, 24), fill=(170, 170, 180))
+    return layer
 
-shutil.copy(os.path.join(repo, 'common/src/main/resources/assets/pocket_list/icon.png'), os.path.join(work, 'icon.png'))
-captions = {s: shot('cap_' + s, f'<div class="cap">{html.escape(c)}</div>', True, 860 if s in SCREEN_SCENES else 300)
-            for s, c in SCENES if c}
-end = shot('end', '<div class="end"><img src="icon.png"><h1>Pocket List</h1>'
-           '<p>Fabric, NeoForge and Forge<br>Minecraft 1.20.1 to 26.3<br><span class="g">on CurseForge</span></p></div>', False)
-end.convert('RGB').save(os.path.join(work, 'end.png'))
+captions = {s: caption(lines, top) for s, lines, top in SCENES if lines}
+BADGE = badge()
 
 # A Minecraft-ish pixel arrow, as in assemble.py, drawn at 3x for the tall frames.
 ARROW = ["2", "22", "212", "2112", "21112", "211112", "2111112", "21111112", "211111112", "2111112222",
@@ -84,18 +95,10 @@ with open(os.path.join(frames_dir, 'frames.tsv')) as f:
 with open(os.path.join(frames_dir, 'actions.tsv')) as f:
     actions = [(r[0], int(r[1]), r[2], r[3]) for r in csv.reader(f, delimiter='\t')]
 
-FADE_IN = 6  # frames for a caption to fade in
-# Scenes cut short: (scene, the action that ends it, frames kept after it). The chest scene's
-# turn away looks at whatever is behind the player, so it stops once the chest has closed.
-CUTS = {'chest': ('chest_close', 9)}
+FADE_IN = 4  # frames for a caption to fade in; scenes cut hard
 counts = {}
-for scene, _ in SCENES:
+for scene, _, _ in SCENES:
     names = sorted(n for n in os.listdir(frames_dir) if n.startswith(scene + '_') and n.endswith('.png'))
-    if scene in CUTS:
-        kind, keep = CUTS[scene]
-        last = next((f for s, f, k, _ in actions if s == scene and k == kind), None)
-        if last is not None:
-            names = names[:last + keep + 1]
     counts[scene] = len(names)
     dest = os.path.join(work, scene)
     os.makedirs(dest)
@@ -108,6 +111,7 @@ for scene, _ in SCENES:
         x, y = cursor_at.get((scene, i), ('-', '-'))
         if x != '-':
             img.alpha_composite(cursor, (int(int(x) * sx), int(int(y) * sy)))
+        img.alpha_composite(BADGE)
         if cap is not None:
             a = min(1.0, (i + 1) / FADE_IN)
             layer = cap.copy()
@@ -117,18 +121,14 @@ for scene, _ in SCENES:
 
 # The order, and where each piece starts, for the sounds.
 clips, starts, t = [], {}, 0.0
-for scene, _ in SCENES:
+for scene, _, _ in SCENES:
     clip = os.path.join(work, scene + '.mp4')
     run('ffmpeg', '-y', '-framerate', str(FPS), '-i', os.path.join(work, scene, '%04d.png'),
         '-vf', 'format=yuv420p', '-r', '30', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', clip)
     starts[scene] = t
     t += counts[scene] / FPS
     clips.append(clip)
-end_clip = os.path.join(work, 'end.mp4')
-run('ffmpeg', '-y', '-loop', '1', '-t', str(END_SECONDS), '-framerate', str(FPS), '-i', os.path.join(work, 'end.png'),
-    '-vf', 'fade=t=in:st=0:d=0.3,format=yuv420p', '-r', '30', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', end_clip)
-clips.append(end_clip)
-total = t + END_SECONDS
+total = t
 with open(os.path.join(work, 'list.txt'), 'w') as f:
     f.writelines(f"file '{c.replace(os.sep, '/')}'\n" for c in clips)
 silent = os.path.join(out, 'pocket-list-short-silent.mp4')

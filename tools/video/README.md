@@ -13,8 +13,11 @@ and one GIF per scene. Needs ffmpeg, Python 3 with Pillow, and Chrome or Chromiu
 
 ## The vertical Short
 
-`VideoShort` films a 1080x1920 Short in eight scenes; `assemble_short.py` puts each scene's caption
-on the footage and adds an end card and the same game sounds.
+`VideoShort` films a 1080x1920 Short in six quick scenes: the finished list first, and the last scene
+back where the first began, so a replay loops. Scenes without a screen are filmed at GUI scale 5 so
+the list reads on a phone. `assemble_short.py` puts each scene's caption on the footage (bold white
+words with a black outline, one in green), a small Pocket List badge and the same game sounds. No
+end card.
 
 1. Film it: `./gradlew :fabric:runClientGameTest -PvideoShort`. Add `-Pcottage=<file>` and
    `-Ptimber=<file>` to film at two houses built from `.mcfunction` files (without them the scenes

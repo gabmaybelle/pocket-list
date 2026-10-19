@@ -16,7 +16,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
@@ -35,8 +34,8 @@ import net.minecraft.world.phys.Vec3;
 
 /**
  * Films the vertical YouTube Short: like {@link VideoTour}, a screenshot every tick, but in a tall
- * window and in six quick scenes, half at a cottage and half at a timber house when their build
- * files are passed in (`-Pcottage=<.mcfunction> -Ptimber=<.mcfunction>`); without them the scenes
+ * window and in six quick scenes (the payoff first, and the last back where the first began, so a
+ * replay loops), at a cottage and a timber house when their build files are passed in (`-Pcottage=<.mcfunction> -Ptimber=<.mcfunction>`); without them the scenes
  * play on open ground. Frames, `actions.tsv` and `frames.tsv` go in the game folder's
  * `video_short`. Only runs with `./gradlew :fabric:runClientGameTest -PvideoShort`.
  */
@@ -55,6 +54,10 @@ public class VideoShort implements FabricClientGameTest {
 	private boolean lastFinished;
 	private BlockPos cottage;
 	private BlockPos timber;
+	/** The GUI scale for scenes without a screen: 5 in a 1080-wide window, 216 GUI pixels across. */
+	private int bigScale;
+	/** Small pauses between typed letters, the same every run. */
+	private final java.util.Random typing = new java.util.Random(7);
 
 	static boolean enabled() {
 		return Boolean.getBoolean("pocketlist.videoShort");
@@ -87,6 +90,7 @@ public class VideoShort implements FabricClientGameTest {
 		ctx.waitTicks(3);
 		// The same 360-wide layout in a smaller window (`-PvideoSize=540x960`), scaled up when assembled.
 		int guiScale = Math.max(1, width / 360);
+		bigScale = Math.max(1, width / 216);
 		ctx.runOnClient(mc -> {
 			mc.options.guiScale().set(guiScale);
 			mc.resizeGui();
@@ -106,11 +110,9 @@ public class VideoShort implements FabricClientGameTest {
 			hook(server);
 			addIron(server);
 			breakDown();
-			pasteList();
 			litematica(server);
-			pin(server);
 			chest(server);
-			outro(world, server);
+			loop(server);
 		}
 		try {
 			Files.write(dir.resolve("actions.tsv"), actions);
@@ -195,27 +197,40 @@ public class VideoShort implements FabricClientGameTest {
 
 	// ------------------------------------------------------------------ scenes
 
-	/** 1. On the cottage porch, the last four lanterns arrive and the list finishes with its chime. */
-	private void hook(TestServerContext server) {
-		server.runCommand("give @a lantern 16");
+	/**
+	 * The list on the cottage porch, a few lanterns short: where the Short starts, and where it
+	 * ends again so a replay runs on without a jump. Shown at the big GUI scale, so the list reads
+	 * on a phone.
+	 */
+	private void porch(TestServerContext server) {
+		server.runCommand("clear @a");
+		server.runCommand("give @a lantern 12");
 		server.runCommand("give @a candle 4");
 		ctx.runOnClient(mc -> {
-			Lists.add(Entry.ofItem(Items.LANTERN, 20));
+			Lists.data().lists.clear();
+			Lists.active().name = "Cottage";
+			Lists.add(Entry.ofItem(Items.LANTERN, 16));
 			Lists.add(Entry.ofItem(Items.CANDLE, 4));
+			mc.player.getInventory().setSelectedSlot(8);
 		});
 		// On the front path, looking up at the porch and door.
 		stand(server, cottage, 0.5, 0, 2.5, 0, 3, -8.5);
-		double noteTime = ctx.computeOnClient(mc -> mc.options.notificationDisplayTime().get());
-		ctx.runOnClient(mc -> mc.options.notificationDisplayTime().set(10.0));
+		big();
+		// Let the new list's highlight fade, so the first and last frames match.
+		ctx.waitTicks(30);
+	}
+
+	/** 1. The payoff first: the last lanterns come in, two at a time, and the list finishes. */
+	private void hook(TestServerContext server) {
+		porch(server);
 		scene = "hook";
 		frame = 0;
-		record(12);
-		server.runCommand("give @a lantern 4");
+		record(5);
+		server.runCommand("give @a lantern 2");
+		record(13);
+		server.runCommand("give @a lantern 2");
 		until(mc -> Boolean.TRUE.equals(Lists.active().wasFinished));
-		record(45);
-		check(ctx.computeOnClient(mc -> mc.gui.toastManager().getToast(SystemToast.class, PocketList.FINISHED)) != null,
-				"the finish note is showing");
-		ctx.runOnClient(mc -> mc.options.notificationDisplayTime().set(noteTime));
+		record(30);
 	}
 
 	/** 2. By the cottage fireplace: K, search "iron ingot", ask for 9 and add it. */
@@ -228,24 +243,26 @@ public class VideoShort implements FabricClientGameTest {
 			mc.player.getInventory().setSelectedSlot(8);
 		});
 		stand(server, cottage, 2.5, 1, -10, 8, 2.2, -10);
+		small();
 		scene = "list";
 		frame = 0;
-		record(8);
+		record(3);
 		ctx.getInput().pressKey(PocketList.openKey);
 		log("key", "open");
 		until(mc -> mc.gui.screen() instanceof PocketListScreen);
-		record(8);
+		record(4);
 		clickBox("searchBox");
+		// Typed by a person: quick, but not evenly.
 		for (char c : "iron ingot".toCharArray()) {
 			ctx.getInput().typeChar(c);
 			log("key", "type " + c);
-			record(2);
+			record(c == ' ' ? 3 : 1 + typing.nextInt(2));
 		}
-		record(6);
+		record(4);
 		clickBox("amountBox");
 		ctx.getInput().typeChar('9');
 		log("key", "type 9");
-		record(6);
+		record(4);
 		int[] add = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
 				.filter(c -> c instanceof PocketListScreen.ItemButton b && b.getMessage().getString().equals("Add Iron Ingot"))
 				.map(c -> (AbstractWidget) c).map(w -> new int[] { w.getX() + 9, w.getY() + 9 }).findFirst().orElse(null));
@@ -253,24 +270,24 @@ public class VideoShort implements FabricClientGameTest {
 		click(add[0], add[1], "add iron");
 		check(ctx.computeOnClient(mc -> Lists.active().entries.stream().anyMatch(e -> e.key().equals("minecraft:iron_ingot") && e.need == 9)),
 				"the list needs 9 iron ingots");
-		record(20);
+		record(10);
 	}
 
 	/** 3. Break down the iron: choose a recipe, and only what's still missing is asked for. */
 	private void breakDown() {
 		scene = "breakdown";
 		frame = 0;
-		record(4);
+		record(2);
 		int[] at = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
 				.filter(c -> c instanceof PocketListScreen.ItemButton b && b.getMessage().getString().startsWith("Break down"))
 				.map(c -> (AbstractWidget) c).map(w -> new int[] { w.getX() + 9, w.getY() + 9 }).findFirst().orElse(null));
 		check(at != null, "the iron line has a Break down button");
-		moveTo(at[0], at[1], 8);
-		record(14);
+		moveTo(at[0], at[1], 7);
+		record(5);
 		ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
 		log("click", "break down");
 		until(mc -> mc.gui.screen() instanceof RecipeChooserScreen);
-		record(24);
+		record(14);
 		int[] row = ctx.computeOnClient(mc -> mc.gui.screen().children().stream()
 				.filter(c -> c.getClass().getSimpleName().equals("RecipeRow")).map(c -> (AbstractWidget) c)
 				.map(w -> new int[] { w.getX() + 40, w.getY() + 10 }).findFirst().orElse(null));
@@ -279,19 +296,10 @@ public class VideoShort implements FabricClientGameTest {
 		until(mc -> mc.gui.screen() instanceof PocketListScreen);
 		check(ctx.computeOnClient(mc -> Lists.active().entries.stream().noneMatch(e -> e.key().equals("minecraft:iron_ingot"))),
 				"the iron line is swapped for what it takes");
-		record(40);
+		record(22);
 		press(InputConstants.KEY_ESCAPE, "close");
 		until(mc -> mc.gui.screen() == null);
-		record(6);
 	}
-
-	/** A list as it might be copied out of a notes app, bullets and a checkbox included. */
-	static final String NOTES = """
-			- 64 spruce planks
-			- 24 glass pane
-			[ ] 12 lantern
-			8 flower pot
-			""";
 
 	/** Litematica's own material list export (its Write to file button), for the timber house. */
 	static final String MATERIAL_LIST = """
@@ -309,26 +317,7 @@ public class VideoShort implements FabricClientGameTest {
 			+----------------------+-------+---------+-----------+------------+--------------+
 			""";
 
-	/** 3b. Still by the fireplace: Paste List turns text from a notes app into a checklist. */
-	private void pasteList() {
-		ctx.runOnClient(mc -> mc.keyboardHandler.setClipboard(NOTES));
-		quiet();
-		scene = "paste";
-		frame = 0;
-		record(6);
-		ctx.getInput().pressKey(PocketList.openKey);
-		log("key", "open");
-		until(mc -> mc.gui.screen() instanceof PocketListScreen);
-		record(6);
-		clickButton("Paste List");
-		check(ctx.computeOnClient(mc -> Lists.active().entries.size()) == 4, "the pasted list has four lines");
-		record(36);
-		press(InputConstants.KEY_ESCAPE, "close");
-		until(mc -> mc.gui.screen() == null);
-		record(4);
-	}
-
-	/** 3c. In the timber house's sitting room: From Litematica makes the build's whole list. */
+	/** 4. In the timber house's sitting room: From Litematica makes the build's whole list. */
 	private void litematica(TestServerContext server) {
 		Path file = FabricLoader.getInstance().getConfigDir().resolve("litematica").resolve("material_list_2026-10-18_12.00.00.txt");
 		try {
@@ -337,20 +326,23 @@ public class VideoShort implements FabricClientGameTest {
 		} catch (IOException e) {
 			throw new AssertionError(e);
 		}
+		ctx.runOnClient(mc -> {
+			Lists.data().lists.clear();
+			Lists.active().name = "Cottage";
+		});
 		stand(server, timber, -1, 1, -12, 5, 2.2, -12);
 		scene = "litematica";
 		frame = 0;
-		record(6);
+		record(3);
 		ctx.getInput().pressKey(PocketList.openKey);
 		log("key", "open");
 		until(mc -> mc.gui.screen() instanceof PocketListScreen);
-		record(6);
+		record(3);
 		clickButton("From Litematica");
 		check(ctx.computeOnClient(mc -> Lists.active().entries.size()) == 6, "the material list has six lines");
-		record(40);
+		record(30);
 		press(InputConstants.KEY_ESCAPE, "close");
 		until(mc -> mc.gui.screen() == null);
-		record(14);
 		try {
 			// Don't leave it for the next game test, whose screen would gain the button.
 			Files.delete(file);
@@ -368,83 +360,60 @@ public class VideoShort implements FabricClientGameTest {
 		click(at[0], at[1], label.toLowerCase(java.util.Locale.ROOT));
 	}
 
-	/** 4. Upstairs in the timber house's workshop: pin an inventory item with Z. */
-	private void pin(TestServerContext server) {
+	/** 5. In front of the timber house: open a chest, its planks count, and the list finishes. */
+	private void chest(TestServerContext server) {
+		server.runCommand("clear @a");
 		server.runCommand("give @a spruce_planks 12");
 		ctx.runOnClient(mc -> {
 			Lists.data().lists.clear();
 			Lists.active().name = "Workshop";
+			Lists.add(Entry.ofItem(Items.SPRUCE_PLANKS, 48));
+			mc.player.getInventory().setSelectedSlot(8);
 		});
-		stand(server, timber, 0.5, 6, -10.5, -2.5, 6.5, -15.5);
-		scene = "pin";
-		frame = 0;
-		record(8);
-		ctx.runOnClient(mc -> mc.player.getRecipeBook().setOpen(net.minecraft.world.inventory.RecipeBookType.CRAFTING, false));
-		ctx.getInput().pressKey(options -> options.keyInventory);
-		log("key", "inventory");
-		until(mc -> mc.gui.screen() instanceof InventoryScreen);
-		record(6);
-		int[] planks = slotWith(Items.SPRUCE_PLANKS);
-		moveTo(planks[0], planks[1], 10);
-		record(10);
-		ctx.getInput().pressKey(PocketList.pinKey);
-		log("key", "pin");
-		record(2);
-		check(ctx.computeOnClient(mc -> Lists.active().entries.stream().anyMatch(e -> e.key().equals("minecraft:spruce_planks") && e.need > 0)),
-				"Z pins the planks");
-		record(24);
-		ctx.runOnClient(mc -> mc.player.closeContainer());
-		log("key", "close");
-		record(18);
-	}
-
-	/** 5. In front of the timber house: open a chest once, and its planks count from then on. */
-	private void chest(TestServerContext server) {
-		ctx.runOnClient(mc -> Lists.active().entries.forEach(e -> e.need = 48));
 		// Our own chest on the front path, so the shot doesn't depend on where the house's chests are.
 		BlockPos box = timber.offset(1, 0, 3);
 		String at = box.getX() + " " + box.getY() + " " + box.getZ();
 		server.runCommand("setblock " + at + " chest[facing=south]{Items:[{Slot:13b,id:\"minecraft:spruce_planks\",count:36}]}");
 		stand(server, timber, 1, 0, 6, 1, 0.5, 3);
 		ctx.getInput().lookAt(box);
-		ctx.waitTicks(3);
+		big();
+		ctx.waitTicks(30);
 		scene = "chest";
 		frame = 0;
-		record(12);
+		record(8);
 		// A right-click, as a player opens it, with the crosshair on the chest.
 		check(ctx.computeOnClient(mc -> mc.hitResult instanceof BlockHitResult hit && hit.getBlockPos().equals(box)),
 				"the crosshair is on the chest at " + box);
 		ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_RIGHT);
 		log("chest_open", "use chest");
 		until(mc -> mc.gui.screen() instanceof ContainerScreen);
-		record(28);
+		until(mc -> Boolean.TRUE.equals(Lists.active().wasFinished));
+		record(26);
 		ctx.runOnClient(mc -> mc.player.closeContainer());
 		log("chest_close", "close chest");
 		record(10);
-		// Turn away from the chest, and it still counts.
-		Vec3 eye = ctx.computeOnClient(mc -> mc.player.getEyePosition());
-		ctx.getInput().lookAt(BlockPos.containing(eye.add(eye.subtract(Vec3.atCenterOf(box)))));
-		record(36);
 		check(ctx.computeOnClient(mc -> Lists.active().entries.stream().anyMatch(e -> e.key().equals("minecraft:spruce_planks") && e.have >= 48)),
 				"the chest's planks count with what's carried");
 	}
 
-	/** 6. The timber house at dusk, from the low corner, with the HUD still up. */
-	private void outro(TestSingleplayerContext world, TestServerContext server) {
-		server.runCommand("time set 12800");
-		server.runCommand("clear @a spruce_planks");
-		ctx.runOnClient(mc -> {
-			Lists.data().lists.clear();
-			Lists.active().name = "Next build";
-			Lists.add(Entry.ofItem(Items.SPRUCE_LOG, 64));
-			Lists.add(Entry.ofItem(Items.LANTERN, 8));
-			Lists.add(Entry.ofItem(Items.DEEPSLATE_TILES, 128));
-		});
-		stand(server, timber, 12.5, 0.3, 5.5, 1.5, 9, -9.5);
-		world.getConnection().waitForChunksRender();
-		scene = "outro";
+	/** 6. Back on the cottage porch, just as the Short began, so it loops. */
+	private void loop(TestServerContext server) {
+		porch(server);
+		scene = "loop";
 		frame = 0;
-		record(110);
+		record(12);
+	}
+
+	/** The list and the world at a GUI scale past the game's own limit, so the list reads on a phone. */
+	private void big() {
+		ctx.runOnClient(mc -> mc.getWindow().setGuiScale(bigScale));
+		ctx.waitTicks(2);
+	}
+
+	/** Back to the game's GUI scale, where the list screen fits. */
+	private void small() {
+		ctx.runOnClient(Minecraft::resizeGui);
+		ctx.waitTicks(2);
 	}
 
 	// ------------------------------------------------------------------ filming (as in VideoTour)
@@ -468,6 +437,8 @@ public class VideoShort implements FabricClientGameTest {
 	}
 
 	private void shoot() {
+		// At the big GUI scale the finish note would land on the list, which turns green and says so itself.
+		ctx.runOnClient(mc -> mc.gui.toastManager().clear());
 		ctx.takeScreenshot(TestScreenshotOptions.of(String.format("%s_%04d", scene, frame)).disableCounterPrefix().withDestinationDir(dir));
 		String state = ctx.computeOnClient(mc -> {
 			int have = Lists.active().entries.stream().mapToInt(e -> e.have).sum();
@@ -530,11 +501,11 @@ public class VideoShort implements FabricClientGameTest {
 	}
 
 	private void click(int guiX, int guiY, String what) {
-		moveTo(guiX, guiY, 8);
-		record(4);
+		moveTo(guiX, guiY, 5 + typing.nextInt(3));
+		record(1 + typing.nextInt(2));
 		ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
 		log("click", what);
-		record(3);
+		record(2);
 	}
 
 	private void clickBox(String name) {
