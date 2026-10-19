@@ -98,27 +98,31 @@ public class VideoShort implements FabricClientGameTest {
 		// A screen shorter than the window can make the system shrink it; better to stop than film the wrong shape.
 		String got = ctx.computeOnClient(mc -> mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight());
 		check(got.equals(width + "x" + height), "the window is " + width + "x" + height + " (it is " + got + ")");
-		try (TestSingleplayerContext world = ctx.worldBuilder().setUseConsistentSettings(false).adjustSettings(state -> {
-			state.setSeed("pocket list");
-			state.setGameMode(net.minecraft.client.gui.screens.worldselection.WorldCreationUiState.SelectedGameMode.SURVIVAL);
-			state.setDifficulty(Difficulty.PEACEFUL);
-			state.setAllowCommands(true);
-		}).create()) {
-			world.getConnection().waitForChunksRender();
-			TestServerContext server = world.getServer();
-			setUp(world, server);
-			hook(server);
-			addIron(server);
-			breakDown();
-			litematica(server);
-			chest(server);
-			loop(server);
-		}
+		// The logs are written even if a scene fails, so the frames filmed before it keep their cursor and sounds.
 		try {
-			Files.write(dir.resolve("actions.tsv"), actions);
-			Files.write(dir.resolve("frames.tsv"), frames);
-		} catch (IOException e) {
-			throw new AssertionError(e);
+			try (TestSingleplayerContext world = ctx.worldBuilder().setUseConsistentSettings(false).adjustSettings(state -> {
+				state.setSeed("pocket list");
+				state.setGameMode(net.minecraft.client.gui.screens.worldselection.WorldCreationUiState.SelectedGameMode.SURVIVAL);
+				state.setDifficulty(Difficulty.PEACEFUL);
+				state.setAllowCommands(true);
+			}).create()) {
+				world.getConnection().waitForChunksRender();
+				TestServerContext server = world.getServer();
+				setUp(world, server);
+				hook(server);
+				addIron(server);
+				breakDown();
+				litematica(server);
+				chest(server);
+				loop(server);
+			}
+		} finally {
+			try {
+				Files.write(dir.resolve("actions.tsv"), actions);
+				Files.write(dir.resolve("frames.tsv"), frames);
+			} catch (IOException e) {
+				throw new AssertionError(e);
+			}
 		}
 	}
 
