@@ -76,6 +76,20 @@ if (project.hasProperty("videoTour")) {
 	}
 }
 
+// `-PvideoShort` films the vertical Short (VideoShort) in build/run/clientGameTest/video_short.
+// `-Pcottage=<file>` and `-Ptimber=<file>` name the two houses' .mcfunction builds to film at;
+// `-PvideoSize=WxH` changes the window from 1080x1920.
+if (project.hasProperty("videoShort")) {
+	tasks.matching { it.name == 'runClientGameTest' }.configureEach {
+		systemProperty 'pocketlist.videoShort', 'true'
+		for (name in ['cottage', 'timber', 'videoSize']) {
+			if (project.hasProperty(name)) {
+				systemProperty "pocketlist.${name}", project.property(name).toString()
+			}
+		}
+	}
+}
+
 // pocket-list-fabric-<version>.jar, the name players download.
 tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }
