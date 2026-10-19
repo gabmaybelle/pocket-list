@@ -13,6 +13,12 @@ pluginManagement {
 	}
 }
 
+// Gradle downloads the Java 17 that Forge's tools and the game test runs need when the computer has
+// none (into ~/.gradle/jdks), so no machine-specific Java path has to be passed.
+plugins {
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'pocket-list'
 
 // `common` holds everything that doesn't care which loader it runs on. `fabric` and `forge`

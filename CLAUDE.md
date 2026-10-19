@@ -31,10 +31,10 @@ it first, and add this session's row before ending.
 
 ## Build and test
 
-- Gradle runs on JDK 25 and needs a Java 17 it can find, for Forge's tools: pass
-  `-Dorg.gradle.java.installations.paths=<path to Java 17>` (or
-  `-Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64`, as CI does). The code is compiled for
-  Java 17 by either. The first Forge build takes several minutes (Minecraft is set up once).
+- Gradle runs on JDK 25 and needs a Java 17 for Forge's tools: it finds an installed one or
+  downloads one itself (the foojay plugin in `settings.gradle`), so no Java path needs passing. CI
+  still points it at the runner's with `-Dorg.gradle.java.installations.fromEnv=JAVA_HOME_17_X64`.
+  The code is compiled for Java 17 either way. The first Forge build takes several minutes (Minecraft is set up once).
 - `./gradlew build`: jars in `fabric/build/libs/` and `forge/build/libs/`.
 - `./gradlew :fabric:runClientGameTest`: counting, chest memory, pinning, typed amounts, Break down, the
   list and settings screens and saving. `./gradlew :forge:runClientTest`: the Forge jar's
