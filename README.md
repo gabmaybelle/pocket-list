@@ -1,10 +1,12 @@
 # Pocket List
 
-A little checklist in the corner of your screen for the things you're gathering.
+A little checklist in the corner of your screen that ticks itself off as you gather.
+
+Client-side, for Fabric and NeoForge on Minecraft 26.2, 26.3 and 1.21.1, and Fabric and Forge on 1.20.1. Download it from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/pocket-list).
 
 ▶ [See it in action: a 36-second video](https://www.youtube.com/shorts/l2mbjTvYLyE)
 
-I kept losing track halfway through a build. I'd head out for logs, come back with logs, and realize I'd forgotten the glass. Pocket List keeps the list for you and ticks things off as you collect them.
+I kept losing track halfway through a build. I'd head out for logs, come back with logs, and realize I'd forgotten the glass. Pocket List keeps the list for you.
 
 This is the version for **Minecraft 1.20.1**, on Fabric and Forge. It does everything the newer versions do; the few small differences are under [On 1.20.1](#on-1201).
 
