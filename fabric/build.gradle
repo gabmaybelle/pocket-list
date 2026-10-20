@@ -76,6 +76,22 @@ if (project.hasProperty("videoTour")) {
 	}
 }
 
+// `-PvideoShort3` films the third cut of the Short (VideoShort3, third person) in
+// build/run/clientGameTest/video_short3. Every other -Pvideo... property is passed on to it:
+// -PvideoScenes=<scene,scene,s_*> films only those scenes, -PvideoScout takes one still per scene,
+// -PvideoWorld=<zip> films in a saved world, -PvideoSkin=<png> dresses the player in that skin.
+if (project.hasProperty("videoShort3")) {
+	tasks.matching { it.name == 'runClientGameTest' }.configureEach {
+		systemProperty 'pocketlist.short3.videoTour', 'true'
+		project.properties.each { name, value ->
+			if (name.startsWith('video') && name != 'videoShort3') {
+				// A bare flag (-PvideoScout) arrives empty: pass it on as true.
+				systemProperty "pocketlist.short3.${name}", value.toString().isEmpty() ? 'true' : value.toString()
+			}
+		}
+	}
+}
+
 // pocket-list-fabric-<version>.jar, the name players download.
 tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }

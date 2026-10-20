@@ -8,7 +8,8 @@
 		"fabric-client-gametest": [
 			"com.gabbymaybelle.pocketlist.PocketListClientTest",
 			"com.gabbymaybelle.pocketlist.ScreenshotTour",
-			"com.gabbymaybelle.pocketlist.VideoTour"
+			"com.gabbymaybelle.pocketlist.VideoTour",
+			"com.gabbymaybelle.pocketlist.VideoShort3"
 		]
 	},
 	"depends": {
