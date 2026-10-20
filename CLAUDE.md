@@ -50,7 +50,6 @@ it first, and add this session's row before ending.
   Nightfall Clock sits above the hotbar by default, so the corners are free.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
   top-right with Simple HUD Enhanced, top-left otherwise. Top right sits below the effect icons.
-- The Espresso Flavoured modpack carries a copy of this jar in its `client-overrides/mods/`.
 - **What 1.21.1 does differently.** The game ships obfuscated: the code uses Mojang's names and
   Loom remaps the Fabric jar (`fabric-loom` with `officialMojangMappings()`; NeoForge runs on
   Mojang names already). There are no recipe displays: `Recipes` reads the client's own
@@ -70,9 +69,10 @@ it first, and add this session's row before ending.
 
 One job per mod, decided 2026-10-15, so nothing is done twice and each repo tells the same story:
 
-- **Cozy Core** (cozy-core): the builder rules, each an ordinary game rule: builds stay built (mob
-  explosions, endermen, fire), no phantoms, keep your hotbar on death, the Hearth Lantern, cheap
-  wood in the stonecutter, re-dyeing and builder trades. Fabric and NeoForge jars, plus a plain
+- **Cozy Core** (cozy-core): the Hearth Lantern, which makes the ground around it home: no
+  monsters or phantoms spawn there, and creeper and ghast blasts, fire and endermen leave its
+  blocks alone (each an ordinary game rule, with world-wide switches too); keep your hotbar on
+  death, cheap wood in the stonecutter, re-dyeing and builder trades. Fabric and NeoForge jars, plus a plain
   data pack of the recipes.
 - **Espresso Flavoured Core** (espresso-flavoured): the café: coffee you grow and brew, mugs,
   baristas, Bean Coins, the café charms, and Drowsy (coffee's reason to exist). Longer days stay a
@@ -82,15 +82,6 @@ One job per mod, decided 2026-10-15, so nothing is done twice and each repo tell
 - **Pocket List** (pocket-list): the gathering checklist.
 - **Not Now, Shield** (not-now-shield): the shield drawn lower in first person; on 26.x also
   tools that change blocks while a shield is in the off-hand.
-- **Beyond the Dragon** (beyond-the-dragon): the end-game after the Ender Dragon: ruins at the
-  edge of the End, a dragon that comes back harder, and the aphelite metal.
-- **Forgemark** (forgemark): tempering the tools, weapons and armour you already have, from any
-  mod, for a small capped quality bonus.
-- **Espresso Flavoured** (espresso-flavoured-pack): the modpack that puts them together. Since
-  pack 0.5.0 (2026-10-15) it carries all five: Cozy Core, Espresso Flavoured Core (back as the café
-  once it stopped doing Cozy Core's jobs), Spawn Gazebo, Nightfall Clock and Pocket List.
-- **Cozy Core Pack** (cozy-core-pack): the builder-friendly modpack around Cozy Core, with Spawn
-  Gazebo, Nightfall Clock, Pocket List and Not Now, Shield.
 
 A new feature goes in the mod whose job it is. If none fits, ask Gabby before adding it anywhere.
 
@@ -109,7 +100,7 @@ computer and others in the cloud. These rules keep their work fitting together.
 the test, read its result (and the screenshot, for anything visual), then commit that one
 branch, then push it. A cherry-pick that conflicts stops the work until it is resolved by hand.
 A worldgen or balance change is tested on every terrain in the branch's matrix before it goes
-to any other branch. (Learned on Beyond the Dragon, 2026-10-14, when scripted chains committed
+to any other branch. (Learned on another mod, 2026-10-14, when scripted chains committed
 a conflicted cherry-pick, put one branch's files on another, and sent an untested ore change to
 all three branches.) For a Gradle game test use a game watcher that reports a verdict (in the world, error screen, crashed or hung),
 not a wait loop.
