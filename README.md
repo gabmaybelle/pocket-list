@@ -65,7 +65,7 @@ Your inventory and off-hand count, and so do the shulker boxes and bundles you c
 
 Pocket List also remembers what was in the chests, barrels, shulker boxes, hoppers, dispensers and droppers you've opened, as they were when you closed them. Anything within 32 blocks counts towards your list, so you can stand in your storage room and see what you still need. Ender chests are left out, since their contents are the same everywhere. This memory is kept for each world and each server, so it's still there next time you play.
 
-Some blocks hold things without opening a screen: shelves, and other mods' storage such as Espresso Flavoured's canisters and glass jars. Once you've used one, it counts too, and since those blocks show what they hold, the count stays up to date while you're nearby, even when a hopper does the filling. Mailboxes from Mighty Mail open like chests, so they're remembered like chests.
+Some blocks hold things without opening a screen: shelves, and other mods' storage blocks. Once you've used one, it counts too, and since those blocks show what they hold, the count stays up to date while you're nearby, even when a hopper does the filling. Mailboxes from Mighty Mail open like chests, so they're remembered like chests.
 
 ## Fair play on servers
 

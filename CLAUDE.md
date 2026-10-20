@@ -33,13 +33,13 @@ it first, and add this session's row before ending.
 
 - **Fair play is a promise.** Pocket List never sends anything to a server and only counts what
   the player has seen: no scanning unopened chests, no finding blocks through walls. Keep it so.
-  Blocks that hold things without a screen (shelves, Espresso Flavoured's
-  canisters and jars, anything with Fabric item storage whose contents the server sends to every
+  Blocks that hold things without a screen (shelves,
+  anything with Fabric item storage whose contents the server sends to every
   game) are read through the loader's item storage (`ItemStorage.SIDED` on Fabric, `Capabilities.Item.BLOCK` on NeoForge) from `ChestMemory`, but only after the player has used
   that block, and they're kept live while the player is within 32 blocks. A chest read that way
   shows empty on the player's side, so chests stay on the screen path.
-- Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes, which
-  covers Espresso's espresso machine through its JEI page); Mod Menu; the minimap and Simple HUD
+- Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes);
+  Mod Menu; the minimap and Simple HUD
   corner defaults; Mighty Mail's mailboxes open a chest menu and are remembered like chests.
   Nightfall Clock sits above the hotbar by default, so the corners are free.
 - The HUD starts bottom-right when a minimap mod is installed (Xaero's, JourneyMap, VoxelMap),
@@ -58,9 +58,6 @@ One job per mod, decided 2026-10-15, so nothing is done twice and each repo tell
   blocks alone (each an ordinary game rule, with world-wide switches too); keep your hotbar on
   death, cheap wood in the stonecutter, re-dyeing and builder trades. Fabric and NeoForge jars, plus a plain
   data pack of the recipes.
-- **Espresso Flavoured Core** (espresso-flavoured): the café: coffee you grow and brew, mugs,
-  baristas, Bean Coins, the café charms, and Drowsy (coffee's reason to exist). Longer days stay a
-  Core setting for now. The survival rules Cozy Core now covers left Core in 0.4.0 (its PLAN-0.4.0.md).
 - **Spawn Gazebo** (spawn-gazebo): the gazebo at the world spawn and its starter chest.
 - **Nightfall Clock** (nightfall-clock): the clock above the hotbar and the dusk warning.
 - **Pocket List** (pocket-list): the gathering checklist.
