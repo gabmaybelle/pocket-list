@@ -49,22 +49,12 @@ it first, and add this session's row before ending.
   changed its return type compiles on both and still crashes on the other, so CI runs
   `tools/check-linkage.js` on the jar against 26.2's game code, and runs the game test on 26.2.
 
-## Gabby's mods: who does what (the same in every repo)
+## This mod's job
 
-One job per mod, decided 2026-10-15, so nothing is done twice and each repo tells the same story:
+**Pocket List**: the gathering checklist.
 
-- **Cozy Core** (cozy-core): the Hearth Lantern, which makes the ground around it home: no
-  monsters or phantoms spawn there, and creeper and ghast blasts, fire and endermen leave its
-  blocks alone (each an ordinary game rule, with world-wide switches too); keep your hotbar on
-  death, cheap wood in the stonecutter, re-dyeing and builder trades. Fabric and NeoForge jars, plus a plain
-  data pack of the recipes.
-- **Spawn Gazebo** (spawn-gazebo): the gazebo at the world spawn and its starter chest.
-- **Nightfall Clock** (nightfall-clock): the clock above the hotbar and the dusk warning.
-- **Pocket List** (pocket-list): the gathering checklist.
-- **Not Now, Shield** (not-now-shield): the shield drawn lower in first person; on 26.x also
-  tools that change blocks while a shield is in the off-hand.
-
-A new feature goes in the mod whose job it is. If none fits, ask Gabby before adding it anywhere.
+Gabby has other mods, each with its own job. Add only features that fit this mod's job. If an
+idea doesn't fit, don't add it here or start it in another repo: ask Gabby where it goes.
 
 ## Working on Gabby's mods (the same in every repo)
 
