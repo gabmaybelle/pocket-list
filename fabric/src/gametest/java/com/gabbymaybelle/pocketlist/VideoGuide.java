@@ -795,11 +795,37 @@ public class VideoGuide implements FabricClientGameTest {
 				cmd("clear @a %s 1", id(item));
 			}
 			place(List.of(p), false);
-			film.ctx.runOnClient(mc -> mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false));
+			film.ctx.runOnClient(VideoGuide::swingArm);
 			film.log("place", BuiltInRegistries.BLOCK.getKey(p.state().getBlock()).getPath());
 			record(i % 2 == 0 ? 2 : 1);
 		}
 		record(40);
+	}
+
+	/**
+	 * Swings the player's main hand. 26.2 has {@code swing(hand)}; 26.3 only {@code swing(hand,
+	 * SwingAnimation, boolean)}, whose animation type 26.2 lacks, so the call is looked up by name.
+	 */
+	private static void swingArm(Minecraft mc) {
+		for (var m : net.minecraft.world.entity.LivingEntity.class.getMethods()) {
+			Class<?>[] types = m.getParameterTypes();
+			if (!m.getName().equals("swing") || types.length == 0 || types[0] != net.minecraft.world.InteractionHand.class) {
+				continue;
+			}
+			try {
+				if (types.length == 1) {
+					m.invoke(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND);
+					return;
+				}
+				if (types.length == 3 && types[2] == boolean.class) {
+					m.invoke(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND, types[1].getField("DEFAULT").get(null), false);
+					return;
+				}
+			} catch (ReflectiveOperationException e) {
+				throw new AssertionError("could not swing the arm", e);
+			}
+		}
+		throw new AssertionError("no swing method on this Minecraft version");
 	}
 
 	/** 9. The timber house's sitting room: Settings, where the HUD goes round the corners. */
