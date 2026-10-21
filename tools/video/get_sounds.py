@@ -10,9 +10,12 @@ os.makedirs(out, exist_ok=True)
 assets = os.path.expanduser('~/.gradle/caches/fabric-loom/assets')
 index = sorted(glob.glob(os.path.join(assets, 'indexes', '*.json')))[-1]
 objects = json.load(open(index))['objects']
-# ui.button.click, entity.item.pickup, block.note_block.chime (Pocket List's finish sound), a chest, and wood breaking.
+# ui.button.click, entity.item.pickup, block.note_block.chime (Pocket List's finish sound), a chest, and wood breaking;
+# for the guide also a barrel, a flower picked (grass) and wood placed.
 for name, file in {'click': 'random/click_stereo', 'pop': 'random/pop', 'chime': 'note/icechime',
-                   'chest_open': 'block/chest/open', 'chest_close': 'block/chest/close1', 'chop': 'dig/wood1'}.items():
+                   'chest_open': 'block/chest/open', 'chest_close': 'block/chest/close1', 'chop': 'dig/wood1',
+                   'barrel_open': 'block/barrel/open1', 'barrel_close': 'block/barrel/close', 'grass': 'dig/grass1',
+                   'wood2': 'dig/wood2', 'wood3': 'dig/wood3', 'wood4': 'dig/wood4'}.items():
     h = objects[f'minecraft/sounds/{file}.ogg']['hash']
     shutil.copy(os.path.join(assets, 'objects', h[:2], h), os.path.join(out, name + '.ogg'))
     print(name)

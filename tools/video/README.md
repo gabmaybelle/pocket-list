@@ -37,3 +37,22 @@ filmed build first because the jumble clears the cottage away:
    at once, stacked.
 4. `python3 -I tools/video/add_music.py <video> <track> <out> [start seconds]`: a track from
    YouTube's Audio Library under the game sounds, the mix at about -14 LUFS.
+
+## The guide: one porch, start to finish
+
+`VideoGuide` films a 2-minute wide guide (1920x1080) with the same `Film` helper and saved world as
+the Short, in first person, ten scenes named `w_...`: the payoff, planning a list, Break down,
+storage at home, Paste List, gathering and crafting the last torches, From Litematica (it writes
+Litematica's material-list table, so Litematica isn't needed), Clear Done and the build, settings,
+and the end. Each scene sets itself up, so any one can be filmed alone.
+
+1. Film it: `./gradlew :fabric:runClientGameTest -PvideoGuide -PvideoWorld=<zip> [-PvideoSkin=<png>]`
+   (`-PvideoScout` for stills only, `-PvideoScenes=w_gather` for one scene). Frames land in
+   `fabric/build/run/clientGameTest/video_guide`.
+2. `python3 -I tools/video/get_sounds.py <sounds dir>`
+3. `python3 -I tools/video/assemble_guide.py <video_guide folder> <sounds dir> <out dir> [--reuse]`:
+   the video with the game's sounds, a silent copy, `chapters.txt`, a GIF per scene and the
+   thumbnail. `--reuse` keeps the scene clips from the last run and redoes only the sound and what
+   follows (delete a scene's clip in `work-guide/` to redo just that scene).
+4. `python3 -I tools/video/add_music.py <video> <track> <out>` puts a track under it.
+

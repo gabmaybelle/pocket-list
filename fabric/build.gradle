@@ -92,6 +92,19 @@ if (project.hasProperty("videoShort3")) {
 	}
 }
 
+// `-PvideoGuide` films the long-form guide (VideoGuide) in build/run/clientGameTest/video_guide,
+// in the saved backdrop world (-PvideoWorld=<zip>). Every other -Pvideo... property is passed on.
+if (project.hasProperty("videoGuide")) {
+	tasks.matching { it.name == 'runClientGameTest' }.configureEach {
+		systemProperty 'pocketlist.guide.videoTour', 'true'
+		project.properties.each { name, value ->
+			if (name.startsWith('video') && name != 'videoGuide') {
+				systemProperty "pocketlist.guide.${name}", value.toString().isEmpty() ? 'true' : value.toString()
+			}
+		}
+	}
+}
+
 // pocket-list-fabric-<version>.jar, the name players download.
 tasks.named('jar') { archiveBaseName = "${rootProject.name}-fabric" }
 tasks.named('sourcesJar') { archiveBaseName = "${rootProject.name}-fabric" }

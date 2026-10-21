@@ -55,8 +55,8 @@ import net.minecraft.world.phys.Vec3;
 public class PocketListClientTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext ctx) {
-		if (ScreenshotTour.enabled()) {
-			// Only taking screenshots this time.
+		if (ScreenshotTour.enabled() || VideoTour.enabled() || Film.on("pocketlist.short3") || Film.on("pocketlist.guide")) {
+			// Only taking screenshots or filming this time.
 			return;
 		}
 		TestWorldSave save;
@@ -640,6 +640,8 @@ public class PocketListClientTest implements FabricClientGameTest {
 		ctx.getInput().pressKey(PocketList.openKey);
 		ctx.waitForScreen(PocketListScreen.class);
 		int lists = ctx.computeOnClient(mc -> Lists.data().lists.size());
+		// The clipboard is the computer's own: put back what was on it once Copy List is checked.
+		String clipboard = ctx.computeOnClient(mc -> mc.keyboardHandler.getClipboard());
 		ctx.runOnClient(mc -> mc.keyboardHandler.setClipboard(TYPED));
 		ctx.clickScreenButton("Paste List");
 		check(ctx.computeOnClient(mc -> Lists.data().lists.size()) == lists + 1, "Paste List makes a new list");
@@ -652,6 +654,7 @@ public class PocketListClientTest implements FabricClientGameTest {
 		// Copy List writes it out, and the copy pastes back as the same list.
 		ctx.clickScreenButton("Copy List");
 		Map<String, Integer> copied = ctx.computeOnClient(mc -> needsOf(ListText.read(mc.keyboardHandler.getClipboard(), mc.level.enabledFeatures())));
+		ctx.runOnClient(mc -> mc.keyboardHandler.setClipboard(clipboard));
 		check(copied.equals(needs(ctx)), "Copy List's text pastes back as the same list: " + copied);
 
 		// From Litematica appears once Litematica has written a material list, and reads the newest.
