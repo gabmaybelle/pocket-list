@@ -15,5 +15,8 @@
 	},
 	"depends": {
 		"pocket_list": "*"
-	}
+	},
+	"mixins": [
+		"pocket-list-gametest-film.mixins.json"
+	]
 }

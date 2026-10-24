@@ -168,6 +168,7 @@ public class VideoShort3 implements FabricClientGameTest {
 		film.window(1080, 1920, 3);
 		film.scene("s_build", this::build);
 		film.scene("s_gather", this::gather);
+		film.scene("s_fill", this::fill);
 		film.scene("s_jumble", this::jumble);
 	}
 
@@ -223,6 +224,39 @@ public class VideoShort3 implements FabricClientGameTest {
 	}
 
 	/**
+	 * Series Part 2 (mods-media pocket-list/PART-2-PLAN.md): by the timber house with nothing in the corner, then
+	 * a whole build's list appears at once (what Paste List or From Litematica gives, without its screen: menus
+	 * lose viewers), counted against what she carries; she turns to the storage chest, where s_gather begins.
+	 */
+	private void fill() {
+		BlockPos box = timber.offset(0, 0, 3);
+		Vec3 edge = new Vec3(box.getX() + 0.12, box.getY() + 0.7, box.getZ() + 0.94);
+		Vec3 stand = off(timber, 0.5, 0, 6.3);
+		Vec3 lawn = off(timber, -6, 1.2, 9);
+		ready(stand, lawn);
+		cmd("setblock %d %d %d chest[facing=south,type=right]", box.getX(), box.getY(), box.getZ());
+		cmd("setblock %d %d %d chest[facing=south,type=left]", box.east().getX(), box.east().getY(), box.east().getZ());
+		giveJumble();
+		film.ctx.getInput().pressKey(o -> o.keyHotbarSlots[0]);
+		gui(4);
+		film.ctx.waitTicks(45);
+		film.turnHead(lawn);
+		resetCounts();
+		record(10);
+		cottageList();
+		film.ctx.runOnClient(Counter::update);
+		film.log("list_filled", "");
+		Film.check(film.ctx.computeOnClient(mc -> Lists.active().entries.size() == NEEDS.size()), "the whole build's list is in the corner");
+		record(26);
+		// Turning to the chest, the angle s_gather starts from.
+		for (int i = 1; i <= 14; i++) {
+			film.turnHead(lawn.lerp(edge, Film.ease(i / 14.0)));
+			record(1);
+		}
+		record(4);
+	}
+
+	/**
 	 * 2. At the timber house's storage chest: open it and most lines fill; chop the last two logs;
 	 * walk on over the last two lanterns, and the list finishes.
 	 */
@@ -235,6 +269,12 @@ public class VideoShort3 implements FabricClientGameTest {
 		cmd("fill %d %d %d %d %d %d air", a.getX(), a.getY(), a.getZ(), b.getX(), b.getY(), b.getZ());
 		Vec3 edge = new Vec3(box.getX() + 0.12, box.getY() + 0.7, box.getZ() + 0.94);
 		ready(off(timber, 0.5, 0, 6.3), edge);
+		// The roundup's take (Gabby, 2026-10-23: her in third person, not back to the camera): a camera
+		// out on the lawn to her north-west, so she faces it at the chest and walks towards it to the
+		// lanterns, with the list still in the corner. Off for the series' own cut (videoFront unset).
+		if (Boolean.getBoolean("pocketlist.short3.videoFront")) {
+			frontEye = off(timber, -5.5, 1.9, 2.5);
+		}
 		StringBuilder items = new StringBuilder();
 		int slot = 0;
 		for (Need n : NEEDS) {
@@ -284,6 +324,8 @@ public class VideoShort3 implements FabricClientGameTest {
 			film.ctx.getInput().releaseKey(o -> o.keyUp);
 		}
 		record(30);
+		frontEye = null;
+		film.frontOff();
 		cmd("attribute @p minecraft:block_break_speed base set 1");
 		cmd("fill %d %d %d %d %d %d air", box.getX(), box.getY(), box.getZ(), other.getX(), other.getY(), other.getZ());
 	}
@@ -366,8 +408,15 @@ public class VideoShort3 implements FabricClientGameTest {
 	// ------------------------------------------------------------------ filming, with the sound marks
 
 	/** Films {@code n} frames, logging pickups, counts and the finish for the sound pass. */
+	/** A fixed spot the camera films her from, facing her, or null for the view from behind her. */
+	private Vec3 frontEye;
+
 	private void record(int n) {
 		for (int i = 0; i < n; i++) {
+			if (frontEye != null) {
+				Vec3 at = film.ctx.computeOnClient(mc -> mc.player.position());
+				film.front(frontEye, at.add(0, 1.3, 0));
+			}
 			marks();
 			// At this GUI scale the finish pop-up lands on the list, which turns green and says so itself.
 			film.ctx.runOnClient(mc -> mc.gui.toastManager().clear());

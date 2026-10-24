@@ -638,6 +638,32 @@ public final class Film {
 		ctx.runOnClient(Minecraft::resizeGui);
 	}
 
+	// ------------------------------------------------------------------ the front camera
+
+	/** While on, FilmCameraMixin draws the view from {@link #FRONT_EYE} towards {@link #FRONT_LOOK}. */
+	public static volatile boolean FRONT_ON;
+	public static volatile Vec3 FRONT_EYE, FRONT_LOOK;
+
+	/**
+	 * The view from {@code eye} towards {@code look}, with the player still in her own body (she walks,
+	 * her model and HUD show): a shot can face her. Call it each frame to move with her; the game eases
+	 * nothing, so move the eye a little at a time. Third person, or the game leaves her own model out.
+	 */
+	public void front(Vec3 eye, Vec3 look) {
+		if (!FRONT_ON) {
+			ctx.runOnClient(mc -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK));
+		}
+		target = look;
+		FRONT_EYE = eye;
+		FRONT_LOOK = look;
+		FRONT_ON = true;
+	}
+
+	/** Back to the game's own camera. */
+	public void frontOff() {
+		FRONT_ON = false;
+	}
+
 	// ------------------------------------------------------------------ the camera
 
 	/** Stands the camera at {@code eye}, looking at {@code look} (a teleport; right for spectators). */
