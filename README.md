@@ -97,4 +97,4 @@ Optional on both: [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.
 
 [MIT](LICENSE).
 
-Pocket List is made by Gabby with help from Claude, an AI assistant.
+Pocket List is made by Gabby.
