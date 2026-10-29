@@ -43,6 +43,10 @@ class LogicTest {
 		assertNull(Names.suggestAdd(new String[] {"chests", "2"}, items::contains));
 		assertNull(Names.suggestAdd(new String[] {"frobnicate"}, items::contains));
 		assertNull(Names.suggestAdd(new String[0], items::contains));
+		assertEquals(List.of("chest"), List.of(Names.withoutAmount(new String[] {"chest", "2"})));
+		assertEquals(List.of("oak", "log"), List.of(Names.withoutAmount(new String[] {"oak", "log", "stack"})));
+		assertEquals(List.of("oak", "log"), List.of(Names.withoutAmount(new String[] {"oak", "log"})));
+		assertEquals(List.of("2"), List.of(Names.withoutAmount(new String[] {"2"})));
 	}
 
 	@Test

@@ -35,6 +35,14 @@ public final class Names {
 		return "add " + item + (amount ? " " + last : "");
 	}
 
+	/** The words without a trailing amount: "chest 2" and "chest stack" are "chest", for the commands that take only an item. */
+	public static String[] withoutAmount(String[] words) {
+		if (words.length < 2) return words;
+		String last = words[words.length - 1];
+		if (last.chars().allMatch(Character::isDigit) || last.equalsIgnoreCase("stack")) return java.util.Arrays.copyOfRange(words, 0, words.length - 1);
+		return words;
+	}
+
 	/** "Oak Planks", "oak planks", "oak_planks" or "minecraft:oak_planks" to {@code minecraft:oak_planks}. */
 	public static String key(String typed) {
 		String s = typed.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+", "_");

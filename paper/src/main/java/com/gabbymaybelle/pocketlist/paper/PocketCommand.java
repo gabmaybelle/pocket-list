@@ -161,6 +161,7 @@ final class PocketCommand implements BasicCommand {
 			case "add" -> changed = add(player, list, rest);
 			case "need" -> changed = need(player, list, rest);
 			case "remove" -> {
+				rest = Names.withoutAmount(rest);
 				Entry e = rest.length > 0 ? list.find(String.join(" ", rest)) : null;
 				if (e == null) e = rest.length > 0 ? list.find(Names.key(String.join(" ", rest))) : null;
 				if (e == null) {
@@ -367,6 +368,8 @@ final class PocketCommand implements BasicCommand {
 			fail(player, "Pocket List: /pocket breakdown <item>");
 			return false;
 		}
+		// "/pocket breakdown chest 2": the amount is the line's own, so a trailing number is ignored.
+		rest = Names.withoutAmount(rest);
 		String key = String.join(" ", rest);
 		Entry e = list.find(key);
 		if (e == null) e = list.find(Names.key(key));
