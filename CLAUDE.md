@@ -20,6 +20,13 @@ it first, and add this session's row before ending.
 - `neoforge/`: `PocketListNeoForge` (NeoForge events, item storage through
   `Capabilities.Item.BLOCK`, the Mods screen's Config button) and `neoforge.mods.toml`. JEI finds
   `JeiPlugin` by its `@JeiPlugin` annotation there; on Fabric through the `jei_mod_plugin` entrypoint.
+- `paper/`: the Paper server plugin (`pocket-list-paper-<version>.jar`), Paper API only, nothing from
+  `common`: a plugin never sees Minecraft's classes, so the list model (`Entry`, `PocketListData`,
+  `Lists`), the breakdown maths (`FoundRecipe`) and the names are a small plain-Java copy of the mod's.
+  Lists live in each player's persistent data (`PlayerData`); `Counter` recounts on inventory events
+  (never on a timer); `Sidebar` is the HUD as a per-player scoreboard sidebar; `PocketCommand` is every
+  key as `/pocket` and `ChatList` the list screen as clickable chat; `ServerRecipes` reads the server's
+  recipes for Break down; `SelfTest` is what the headless test runs.
 
 ## Build and test
 
@@ -28,6 +35,14 @@ it first, and add this session's row before ending.
   list and settings screens and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it
   again with that recipe viewer installed. Add `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`
   for 26.2 (JEI 30.29 there; REI only on 26.3); add `-Pneoforge_version=26.2.0.93` too so the NeoForge project configures for 26.2.
+- `./gradlew :paper:test`: the plugin's pure parts (entries, lists and their JSON, the HUD order, the
+  chime rule, recipe tidying, the breakdown maths, the copy text), no server.
+- `node tools/paper-server-test.js paper/run --plugin paper/build/libs/pocket-list-paper-<v>.jar --eula`
+  (Paper): downloads a Paper server into the folder once and starts it on a brand-new world with no
+  window: the plugin loads, `/pocket selftest` reads the server's own recipes the way Break down does
+  (planks from logs, sticks' two recipes, furnace and blast furnace merged, coal-or-charcoal) and the
+  maths, the console is refused politely, no warnings. `--eula` is your acceptance of Minecraft's
+  server EULA. The sidebar, counting and the chat buttons need a player: a hand play before a release.
 
 ## Gotchas
 

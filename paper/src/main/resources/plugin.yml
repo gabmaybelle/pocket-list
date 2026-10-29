@@ -1,0 +1,14 @@
+name: PocketList
+version: ${version}
+main: com.gabbymaybelle.pocketlist.paper.PocketListPlugin
+description: A gathering list at the side of your screen that ticks itself off as you collect.
+author: Gabby
+website: https://github.com/gabmaybelle/pocket-list
+api-version: '26.3'
+permissions:
+  pocketlist.use:
+    description: /pocket, the gathering list
+    default: true
+  pocketlist.admin:
+    description: /pocket selftest
+    default: op

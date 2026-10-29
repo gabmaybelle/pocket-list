@@ -1,6 +1,7 @@
 # Builds the mod on every push and pull request, then runs the in-game test (src/gametest) on a
 # virtual display, so a broken build or a crash in game shows up straight away. The test also runs
-# with each optional mod the mod works with installed (JEI, REI), and on Minecraft 26.2. The built jars
+# with each optional mod the mod works with installed (JEI, REI), and on Minecraft 26.2, plus the Paper
+# plugin on a headless Paper server. The built jars
 # are attached to each run under "Artifacts", and the game test's screenshots alongside them.
 
 name: build
@@ -45,6 +46,13 @@ jobs:
         run: chmod +x ./gradlew
       - name: build
         run: ./gradlew build
+      - name: Paper server test
+        # The Paper plugin (paper/) on a real Paper server with a brand-new world: no window. The
+        # plugin loads, /pocket selftest reads the server's recipes the way Break down does and
+        # checks the maths, and nothing is logged as an error or warning.
+        if: matrix.variant == 'on its own'
+        timeout-minutes: 10
+        run: node tools/paper-server-test.js paper/run --plugin "$(ls paper/build/libs/pocket-list-paper-*.jar | grep -v sources)" --eula
       - name: the jar only calls what 26.2 has
         # The jar players get is built against 26.3. A game method that kept its name but changed
         # its return type compiles on both versions and still crashes on 26.2, so check the jar
@@ -90,3 +98,4 @@ jobs:
           path: |
             fabric/build/libs/
             neoforge/build/libs/
+            paper/build/libs/

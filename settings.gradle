@@ -18,4 +18,6 @@ rootProject.name = 'pocket-list'
 // `common` holds everything that doesn't care which loader it runs on. `fabric` and `neoforge`
 // compile those sources straight into their own jars (see their build.gradle), so there is one
 // codebase and two mod files.
-include 'common', 'fabric', 'neoforge'
+include 'common', 'fabric', 'neoforge', 'paper'
+// paper is the server plugin: Paper API only, nothing from common (a plugin never sees Minecraft's
+// classes). Its list logic is a small plain-Java copy of the mod's.
