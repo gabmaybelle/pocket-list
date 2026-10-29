@@ -130,6 +130,17 @@ final class PocketCommand implements BasicCommand {
 			help(sender);
 			return;
 		}
+		if (!word.isEmpty() && !WORDS.contains(word)) {
+			// "/pocket chest 2" means "/pocket add chest 2": say so, with the command ready to click.
+			String meant = Names.suggestAdd(args, k -> Material.matchMaterial(k) != null && Material.matchMaterial(k).isItem() && !Material.matchMaterial(k).isAir());
+			if (meant != null) {
+				sender.sendMessage(Component.text("Pocket List: unknown: " + args[0] + ". Did you mean /pocket " + meant + "? ", NamedTextColor.RED)
+						.append(ChatList.button("yes, add it", "/pocket " + meant, "/pocket " + meant)));
+			} else {
+				fail(sender, "Pocket List: unknown: " + args[0] + ". /pocket help lists the commands.");
+			}
+			return;
+		}
 		if (!(source.getExecutor() instanceof Player player)) {
 			fail(sender, "Pocket List: the list belongs to a player; only /pocket selftest and /pocket help work from here.");
 			return;

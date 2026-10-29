@@ -146,6 +146,12 @@ async function main() {
 		check('/pocket from the console says the list belongs to a player', /belongs to a player/.test(console_), console_);
 		const help = await server.command('pocket help', /gathering list|Unknown or incomplete command/);
 		check('/pocket help answers', /gathering list/.test(help), help);
+		const meant = await server.command('pocket chest 2');
+		check('/pocket chest 2 suggests /pocket add chest 2', /Did you mean \/pocket add chest 2\?/.test(meant), meant);
+		const meantTwo = await server.command('pocket oak log 8');
+		check('/pocket oak log 8 suggests /pocket add oak log 8', /Did you mean \/pocket add oak log 8\?/.test(meantTwo), meantTwo);
+		const unknown = await server.command('pocket frobnicate');
+		check('an unknown word that is no item points at /pocket help', /\/pocket help lists the commands/.test(unknown) && !/Did you mean/.test(unknown), unknown);
 
 		const errors = () => server.lines.filter((l) => /^\[[\d:]+ (ERROR|WARN)\]/.test(l) && /PocketList|Pocket List|pocketlist/i.test(l));
 		check('no errors or warnings from the plugin', errors().length === 0, errors().join(' | '));

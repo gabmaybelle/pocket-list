@@ -34,6 +34,18 @@ class LogicTest {
 	}
 
 	@Test
+	void unknownWordThatNamesAnItemSuggestsAdd() {
+		java.util.Set<String> items = java.util.Set.of("minecraft:chest", "minecraft:oak_log");
+		assertEquals("add chest 2", Names.suggestAdd(new String[] {"chest", "2"}, items::contains));
+		assertEquals("add oak log 8", Names.suggestAdd(new String[] {"oak", "log", "8"}, items::contains));
+		assertEquals("add oak log stack", Names.suggestAdd(new String[] {"oak", "log", "stack"}, items::contains));
+		assertEquals("add chest", Names.suggestAdd(new String[] {"chest"}, items::contains));
+		assertNull(Names.suggestAdd(new String[] {"chests", "2"}, items::contains));
+		assertNull(Names.suggestAdd(new String[] {"frobnicate"}, items::contains));
+		assertNull(Names.suggestAdd(new String[0], items::contains));
+	}
+
+	@Test
 	void entryLineCapsHaveAtNeed() {
 		Entry e = new Entry("minecraft:oak_planks", 64);
 		e.have = 100;
