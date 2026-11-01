@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- **Pocket List for Paper servers.** A new `paper` file is a plugin for Paper 26.3: drop it in the server's `plugins` folder and every player gets a gathering list, with nothing to install. The list shows as a sidebar on the right ("24/64 Oak Planks", green when you have enough, "all gathered!" with a chime when it's done), and `/pocket` does what the keys and the list screen do: add items by name, the one in your hand or what a recipe needs, change amounts, break a line down using the server's own recipes (choosing when there's more than one), keep several lists, and show the list in chat with buttons to click. Your lists are kept on the server. It counts your inventory, the shulker boxes and bundles you carry, and whatever container is open. It doesn't remember chests yet, and it has no corner HUD, no keys, no pinning from inventory screens, no JEI or REI, and no Paste List or From Litematica. A player who also runs the mod sees both lists; `/pocket hud off` hides the sidebar.
+- The mod itself is unchanged.
+
 ## 0.3.0
 
 - **Paste List** makes a new list from text you've copied: one item per line with how many, such as "64 oak planks", "Torches x16" or "minecraft:glass_pane 8". Lines it can't match to an item are named in a message, never guessed.

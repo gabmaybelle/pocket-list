@@ -2,7 +2,7 @@
 
 A little checklist in the corner of your screen that ticks itself off as you gather.
 
-Client-side, for Fabric and NeoForge on Minecraft 26.2, 26.3 and 1.21.1, and Fabric and Forge on 1.20.1. Download it from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/pocket-list).
+Client-side, for Fabric and NeoForge on Minecraft 26.2, 26.3 and 1.21.1, and Fabric and Forge on 1.20.1, plus a plugin for Paper servers on 26.3. Download it from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/pocket-list).
 
 ▶ [See it in action: a 36-second video](https://www.youtube.com/shorts/l2mbjTvYLyE)
 
@@ -81,6 +81,20 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 - On someone else's server without JEI or REI, Break down and recipe pinning only know the recipes you've unlocked. Adding items by name always works.
 - Chest memory goes by what was there when you last closed the chest. If a hopper or a friend moves things around, open it again to refresh it. (Shelves and canisters keep themselves up to date.)
 
+## On a Paper server
+
+The `paper` file is a plugin for [Paper](https://papermc.io/) 26.3 (Java 25). Drop it in the server's `plugins` folder and every player gets a gathering list, with nothing to install. A server can't draw in the corner of your screen or listen for your keys, so the plugin works a little differently:
+
+- The list shows as a sidebar on the right: "Cabin  2/5" in gold, then lines like "24/64 Oak Planks", green once you have enough, with the ones still to gather first. When everything is gathered, the title turns green, a chime plays and "All gathered!" shows on screen.
+- `/pocket` (or `/pocketlist`) shows the list in chat with buttons: [-] [+] [+64] [break down] [x] on each line, and Clear done, New list, Copy and Delete list below.
+- `/pocket add oak_log 32` adds an item (Tab lists every item), `/pocket add hand` adds what you're holding, and `/pocket add recipe lantern` adds what a lantern takes. Add `stack` for a whole stack.
+- `/pocket breakdown lantern` swaps a line for its ingredients using the server's own recipes, data packs included, and asks you to pick when there's more than one.
+- `/pocket new`, `use`, `next`, `rename` and `delete` handle several lists; `/pocket hud off` hides the sidebar and `/pocket hud lines 5` shows five lines. `/pocket help` lists everything.
+- It counts your inventory and off-hand, the shulker boxes and bundles you carry, and whatever container is open. It doesn't remember chests yet.
+- Your lists are kept on the server with your player, so they're there next time you join (but not on other servers).
+- The sidebar is one spot shared with other plugins, such as a server's stats board. Pocket List uses it only while your list has something on it, and hands it back when the list is empty or you turn it off.
+- Not in the plugin: the corner HUD, keys, pinning from inventory screens and the recipe book, JEI and REI, chest memory, Paste List and From Litematica, and the settings screen. If you also run the mod, you'll see both lists; `/pocket hud off` hides the plugin's.
+
 ## Requirements
 
 - Minecraft 26.2 or 26.3 (one file per loader works on both)
@@ -89,9 +103,13 @@ Everything is saved on your own computer. Your lists are in `config/pocket_list.
 
 Optional on both: [JEI](https://modrinth.com/mod/jei) or [REI](https://modrinth.com/mod/rei). Pick the `fabric` or `neoforge` file for your loader.
 
+**Paper servers:** the `paper` file is a plugin for [Paper](https://papermc.io/) 26.3 (Java 25). Drop it in the server's `plugins` folder; players need nothing installed. See "On a Paper server" above for what it does and doesn't do.
+
 ## For developers
 
 `./gradlew :fabric:runClientGameTest` starts the game, creates a test world and plays through Pocket List: counting, chest memory, pinning, typed amounts, Break down, the list screen and saving. Add `-PtestViewer=jei` or `-PtestViewer=rei` to run it again with that recipe viewer installed, and `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2` to run it on 26.2 (JEI only there). `node tools/check-linkage.js <jar> <26.2 game jar>` checks the jar, which is built against 26.3, only calls game code 26.2 has too. Screenshots land in `fabric/build/run/clientGameTest/screenshots`. The jars are `fabric/build/libs/pocket-list-fabric-<version>.jar` and `neoforge/build/libs/pocket-list-neoforge-<version>.jar`; there is no automated game test for the NeoForge jar yet.
+
+The Paper plugin is the `paper` subproject. `./gradlew :paper:test` runs its unit tests, and `node tools/paper-server-test.js <folder> --plugin paper/build/libs/pocket-list-paper-<version>.jar --eula` starts a real Paper server with no window and runs `/pocket selftest` against the server's recipes (`--eula` says you accept the Minecraft server EULA).
 
 ## Licence
 
