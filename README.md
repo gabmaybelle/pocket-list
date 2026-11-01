@@ -115,4 +115,4 @@ The Paper plugin is the `paper` subproject. `./gradlew :paper:test` runs its uni
 
 [MIT](LICENSE).
 
-Pocket List is made by Gabby with help from Claude, an AI assistant.
+Pocket List is made by Gabby.
