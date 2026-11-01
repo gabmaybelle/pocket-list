@@ -3,8 +3,18 @@ package com.gabbymaybelle.pocketlist.paper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
+import org.bukkit.block.Hopper;
 import org.bukkit.command.CommandSender;
+import org.bukkit.inventory.DoubleChestInventory;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
 
 /**
  * {@code /pocket selftest}: the parts that need a running server, checked against its real recipes
@@ -20,7 +30,7 @@ final class SelfTest {
 	private SelfTest() {
 	}
 
-	static void run(CommandSender sender) {
+	static void run(CommandSender sender, Plugin plugin, Settings settings) {
 		List<String> failures = new ArrayList<>();
 		int checks = 0;
 
@@ -72,11 +82,95 @@ final class SelfTest {
 			}
 		}
 
-		if (failures.isEmpty()) {
-			PocketCommand.say(sender, "Pocket List selftest: passed (" + checks + " checks)");
-		} else {
-			PocketCommand.fail(sender, "Pocket List selftest: failed: " + String.join("; ", failures));
+		checks++;
+		Paste.Result pasted = Paste.read(Paste.chatLines("64 oak planks; 3 torches, nonsense"), PocketCommand::itemsNamed);
+		List<String> pastedKeys = new ArrayList<>();
+		for (Entry x : pasted.entries()) pastedKeys.add(x.need + " " + x.key());
+		if (!pastedKeys.equals(List.of("64 minecraft:oak_planks", "3 minecraft:torch")) || !pasted.unknown().equals(List.of("nonsense"))) {
+			failures.add("paste: expected 64 oak planks and 3 torches with nonsense unknown, got " + pastedKeys + " unknown " + pasted.unknown());
 		}
+		checks++;
+		List<String> planksTag = PocketCommand.itemsNamed("#minecraft:planks");
+		if (planksTag == null || planksTag.size() < 10 || !planksTag.get(0).equals("minecraft:oak_planks")) {
+			failures.add("paste: #minecraft:planks should be every plank with oak first, got " + planksTag);
+		}
+
+		int[] total = { checks };
+		chests(plugin, settings, failures, total, () -> {
+			if (failures.isEmpty()) {
+				PocketCommand.say(sender, "Pocket List selftest: passed (" + total[0] + " checks)");
+			} else {
+				PocketCommand.fail(sender, "Pocket List selftest: failed: " + String.join("; ", failures));
+			}
+		});
+	}
+
+	/**
+	 * Chest memory against real blocks, high above the world's spawn: a double chest with 20 oak planks
+	 * whose two halves were both remembered counts 20 (once) from 3 blocks away and nothing from 40; a
+	 * hopper on top filling it is counted without anyone opening it; broken, it's forgotten. The hopper
+	 * needs the world to run a while, so this part reports back about three seconds later.
+	 */
+	private static void chests(Plugin plugin, Settings settings, List<String> failures, int[] checks, Runnable done) {
+		World world = Bukkit.getWorlds().get(0);
+		Location spawn = world.getSpawnLocation();
+		int x = spawn.getBlockX(), y = Math.min(world.getMaxHeight() - 4, 310), z = spawn.getBlockZ();
+		// Loaded without a command, so the console shows nothing but the result.
+		java.util.Set<long[]> forced = new java.util.HashSet<>();
+		for (int cx : new int[] { x >> 4, (x + 1) >> 4 }) {
+			if (!world.isChunkForceLoaded(cx, z >> 4)) {
+				world.setChunkForceLoaded(cx, z >> 4, true);
+				forced.add(new long[] { cx, z >> 4 });
+			}
+		}
+		// Facing north, a chest's left half has its other half to the east.
+		world.getBlockAt(x, y, z).setBlockData(Bukkit.createBlockData("minecraft:chest[facing=north,type=left]"), false);
+		world.getBlockAt(x + 1, y, z).setBlockData(Bukkit.createBlockData("minecraft:chest[facing=north,type=right]"), false);
+		Block left = world.getBlockAt(x, y, z), right = world.getBlockAt(x + 1, y, z);
+		Remembered memory = new Remembered();
+		memory.add(ChestMemory.place(left));
+		memory.add(ChestMemory.place(right));
+		Inventory both = left.getState(false) instanceof Chest c ? c.getInventory() : null;
+		checks[0]++;
+		if (!(both instanceof DoubleChestInventory)) {
+			failures.add("chest memory: the two chests didn't make a double chest");
+			for (long[] c : forced) world.setChunkForceLoaded((int) c[0], (int) c[1], false);
+			done.run();
+			return;
+		}
+		both.addItem(new ItemStack(Material.OAK_PLANKS, 20));
+		Location near = new Location(world, x + 0.5, y, z + 3.5), far = new Location(world, x + 0.5, y, z + 40.5);
+		checks[0]++;
+		int nearCount = planks(memory, near, settings);
+		if (nearCount != 20) failures.add("chest memory: a remembered double chest with 20 oak planks should count 20 from 3 blocks, got " + nearCount);
+		checks[0]++;
+		int farCount = planks(memory, far, settings);
+		if (farCount != 0) failures.add("chest memory: from 40 blocks away it should count 0, got " + farCount);
+
+		world.getBlockAt(x, y + 1, z).setBlockData(Bukkit.createBlockData("minecraft:hopper[facing=down]"));
+		if (world.getBlockAt(x, y + 1, z).getState(false) instanceof Hopper hopper) hopper.getInventory().addItem(new ItemStack(Material.OAK_PLANKS, 5));
+		Bukkit.getScheduler().runTaskLater(plugin, () -> {
+			checks[0]++;
+			int filled = planks(memory, near, settings);
+			if (filled != 25) failures.add("chest memory: a hopper putting 5 more planks in should make 25 without opening it, got " + filled);
+			for (int[] p : new int[][] { { x, y + 1, z }, { x, y, z }, { x + 1, y, z } }) world.getBlockAt(p[0], p[1], p[2]).setType(Material.AIR, false);
+			for (org.bukkit.entity.Item dropped : world.getEntitiesByClass(org.bukkit.entity.Item.class)) {
+				if (dropped.getLocation().distanceSquared(near) < 100) dropped.remove();
+			}
+			checks[0]++;
+			int gone = planks(memory, near, settings);
+			if (gone != 0 || !memory.isEmpty()) failures.add("chest memory: broken chests should count 0 and be forgotten, got " + gone + " with " + memory.size() + " remembered");
+			for (long[] c : forced) world.setChunkForceLoaded((int) c[0], (int) c[1], false);
+			done.run();
+		}, 60);
+	}
+
+	/** Oak planks counted from remembered containers, as the plugin counts them (nothing with chest memory off). */
+	private static int planks(Remembered memory, Location here, Settings settings) {
+		if (!settings.chestMemory()) return 0;
+		Map<String, Integer> counts = new java.util.HashMap<>();
+		ChestMemory.addNearby(memory, here, settings.chestRadius(), null, counts);
+		return counts.getOrDefault("minecraft:oak_planks", 0);
 	}
 
 	private static boolean hasAny(FoundRecipe r, String item) {

@@ -11,7 +11,9 @@ import org.bukkit.plugin.java.JavaPlugin;
  * as you collect. Lists live on the player ({@link PlayerData}), counts move when an inventory does
  * ({@link Counter}), the list is a scoreboard sidebar ({@link Sidebar}), and every key the mod has
  * is a {@code /pocket} command ({@link PocketCommand}) with the list screen as clickable chat
- * ({@link ChatList}). Break down reads the server's own recipes ({@link ServerRecipes}).
+ * ({@link ChatList}). Break down reads the server's own recipes ({@link ServerRecipes}). Containers a
+ * player opened count while they're near ({@link ChestMemory}), lists can be pasted from chat or a
+ * book ({@link Paste}), and the server owner's settings are {@link Settings}.
  */
 public final class PocketListPlugin extends JavaPlugin {
 	private PlayerData data;
@@ -19,14 +21,21 @@ public final class PocketListPlugin extends JavaPlugin {
 
 	@Override
 	public void onEnable() {
-		data = new PlayerData(this);
+		saveDefaultConfig();
+		Settings settings = Settings.from(getConfig());
+		data = new PlayerData(this, settings);
 		sidebar = new Sidebar();
 		Counter counter = new Counter(this, data, sidebar);
 		Bukkit.getPluginManager().registerEvents(counter, this);
+		if (settings.chestMemory()) {
+			ChestMemory chests = new ChestMemory(data, settings, counter);
+			Bukkit.getPluginManager().registerEvents(chests, this);
+			counter.useChests(chests);
+		}
 		getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event ->
-				event.registrar().register("pocket", "The gathering list: /pocket help", List.of("pocketlist"), new PocketCommand(data, counter)));
+				event.registrar().register("pocket", "The gathering list: /pocket help", List.of("pocketlist"), new PocketCommand(data, counter, this, settings)));
 		for (Player p : Bukkit.getOnlinePlayers()) counter.mark(p);
-		getLogger().info("Pocket List: ready, /pocket for the list");
+		getLogger().info("Pocket List: ready, /pocket for the list" + (settings.chestMemory() ? ", chest memory within " + settings.chestRadius() + " blocks" : ", chest memory off"));
 	}
 
 	@Override

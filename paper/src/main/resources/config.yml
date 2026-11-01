@@ -1,0 +1,15 @@
+# Pocket List (Paper). Read when the server starts. Players change their own sidebar with /pocket hud.
+
+# Whether a player who has never used /pocket hud sees their list in the sidebar.
+sidebarForNewPlayers: true
+
+# How many lines the sidebar shows for a player who hasn't picked a number (1 to 15).
+defaultLines: 8
+
+# Chests, barrels, shulker boxes, hoppers, dispensers and droppers a player has opened, and shelves
+# they've used, count toward their list while they're nearby. Only containers the player opened
+# themselves count. false: only what the player carries (and the container open on their screen).
+chestMemory: true
+
+# How near (in blocks) a remembered container must be to count (8 to 64).
+chestRadius: 32

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0
+
+- **Chest memory on Paper.** Chests, barrels, shulker boxes, hoppers, dispensers and droppers you've opened, and shelves you've used, now count toward your list while you're within 32 blocks, like the mod. Only ones you opened yourself count. The server can see inside them, so the count is what's in them now: if a friend or a hopper drops planks in, your list goes up. Ender chests don't count, and a double chest counts once.
+- **Paste a list on Paper.** `/pocket paste 64 oak planks, 32 cobblestone; 3 torches` adds a short list. For a long one, or a Litematica material list, write it in a book and quill, one item a line, hold it and type `/pocket paste book`. Names it can't match are listed back, never guessed.
+- **Settings for server owners:** `plugins/PocketList/config.yml` sets whether new players see the sidebar, how many lines it starts with, chest memory on or off, and how near a remembered container must be.
+- The mod itself is unchanged.
+
 ## 0.4.0
 
 - **Pocket List for Paper servers.** A new `paper` file is a plugin for Paper 26.3: drop it in the server's `plugins` folder and every player gets a gathering list, with nothing to install. The list shows as a sidebar on the right ("24/64 Oak Planks", green when you have enough, "all gathered!" with a chime when it's done), and `/pocket` does what the keys and the list screen do: add items by name, the one in your hand or what a recipe needs, change amounts, break a line down using the server's own recipes (choosing when there's more than one), keep several lists, and show the list in chat with buttons to click. Your lists are kept on the server. It counts your inventory, the shulker boxes and bundles you carry, and whatever container is open. It doesn't remember chests yet, and it has no corner HUD, no keys, no pinning from inventory screens, no JEI or REI, and no Paste List or From Litematica. A player who also runs the mod sees both lists; `/pocket hud off` hides the sidebar.

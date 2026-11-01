@@ -35,12 +35,15 @@ import io.papermc.paper.event.player.PlayerInventorySlotChangeEvent;
 /**
  * Counts what a player has, the mod's {@code Counter}: the main inventory and hotbar, the off-hand,
  * the stack on the cursor, the open container's slots (not its result slot), and inside shulker
- * boxes and bundles two deep. Nothing runs on a timer: an inventory change marks the player and one
- * recount runs on the next tick, so a stack moving across ten slots counts once. After a count the
+ * boxes and bundles two deep, plus the containers chest memory remembers ({@link ChestMemory}). An
+ * inventory change marks the player and one recount runs on the next tick, so a stack moving across
+ * ten slots counts once; the only timer is chest memory's recheck, for players who use it. After a count the
  * sidebar is redrawn and, when the active list has just become complete, the chime plays.
  */
 final class Counter implements Listener {
 	static final int MAX_DEPTH = 2;
+	/** How often (in ticks) a player using chest memory is recounted: 2 seconds. */
+	static final long CHEST_RECHECK = 40;
 	/** The slot of each container type that holds a result, not an ingredient (the mod skips {@code ResultSlot}s). */
 	private static final Map<InventoryType, Integer> RESULT_SLOT = Map.ofEntries(
 			Map.entry(InventoryType.WORKBENCH, 0), Map.entry(InventoryType.CRAFTING, 0),
@@ -54,11 +57,26 @@ final class Counter implements Listener {
 	private final Sidebar sidebar;
 	private final Set<UUID> dirty = new HashSet<>();
 	private boolean scheduled;
+	private ChestMemory chests;
 
 	Counter(Plugin plugin, PlayerData data, Sidebar sidebar) {
 		this.plugin = plugin;
 		this.data = data;
 		this.sidebar = sidebar;
+	}
+
+	/**
+	 * Turns on chest memory's part of the count. Remembered containers change without the player
+	 * touching them (a friend, a hopper), so a player with a list and remembered containers is also
+	 * recounted every {@link #CHEST_RECHECK} ticks; nobody else is.
+	 */
+	void useChests(ChestMemory chests) {
+		this.chests = chests;
+		Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+			for (Player p : Bukkit.getOnlinePlayers()) {
+				if (!data.memory(p).isEmpty() && !data.lists(p).active().entries.isEmpty()) mark(p);
+			}
+		}, CHEST_RECHECK, CHEST_RECHECK);
 	}
 
 	/** What the player has of each item, by key. */
@@ -80,7 +98,7 @@ final class Counter implements Listener {
 		return counts;
 	}
 
-	private static void add(Map<String, Integer> counts, ItemStack stack, int depth) {
+	static void add(Map<String, Integer> counts, ItemStack stack, int depth) {
 		if (stack == null || stack.isEmpty()) return;
 		counts.merge(stack.getType().getKey().toString(), stack.getAmount(), Integer::sum);
 		if (depth >= MAX_DEPTH || !stack.hasItemMeta()) return;
@@ -97,10 +115,17 @@ final class Counter implements Listener {
 		return list.applyCounts(counts);
 	}
 
+	/** What the player has, plus what their remembered containers nearby hold. */
+	Map<String, Integer> countWithChests(Player player) {
+		Map<String, Integer> counts = count(player);
+		if (chests != null) chests.addNearby(player, counts);
+		return counts;
+	}
+
 	/** Recounts now, redraws the sidebar, and celebrates a list that has just been finished. */
 	void recount(Player player) {
 		PocketListData list = data.lists(player).active();
-		if (list.applyCounts(count(player))) {
+		if (list.applyCounts(countWithChests(player))) {
 			player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 0.6f, 1.4f);
 			player.showTitle(Title.title(Component.text("All gathered!", NamedTextColor.GREEN),
 					Component.text("You have everything on " + list.name + ".", NamedTextColor.WHITE)));

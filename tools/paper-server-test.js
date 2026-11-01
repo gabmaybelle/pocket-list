@@ -2,13 +2,15 @@
 // Starts a Paper server with the plugin on a brand-new world, with no window, and checks the parts
 // that need a real server: the plugin loads and registers /pocket; /pocket selftest reads the
 // server's own recipes the way Break down does (oak planks from logs, sticks' two recipes, the
-// furnace and blast furnace merged for iron, coal-or-charcoal for a torch) and the breakdown maths;
-// /pocket from the console is refused politely (lists belong to players); and the plugin logs no
-// error or warning. What needs a player (the sidebar, counting, the chat buttons) is a hand play.
-// The Paper server jar is downloaded once into the folder.
+// furnace and blast furnace merged for iron, coal-or-charcoal for a torch), the breakdown maths,
+// pasted text, and chest memory on real blocks (a double chest counted once, near and far, a hopper
+// filling it, broken and forgotten); /pocket from the console is refused politely (lists belong to
+// players); and the plugin logs no error or warning. What needs a player (the sidebar, counting, the
+// chat buttons, a book) is a hand play. The Paper server jar is downloaded once into the folder.
+// --no-chest-memory starts the plugin with chest memory off: the proof run, where the selftest must fail.
 //
 //   node tools/paper-server-test.js "<server folder>" --plugin paper/build/libs/pocket-list-paper-<v>.jar --eula
-//       [--paper 26.3] [--port <n>] [--timeout <seconds>]
+//       [--paper 26.3] [--port <n>] [--timeout <seconds>] [--no-chest-memory]
 //
 // --eula says you accept Minecraft's server EULA (https://aka.ms/MinecraftEULA); without it the
 // script stops before starting the server. The world is deleted first.
@@ -21,7 +23,7 @@ const opt = (name, fallback) => { const i = args.indexOf(name); return i >= 0 &&
 const flag = (name) => args.includes(name);
 const plugin = opt('--plugin', null);
 if (!folder || !plugin) {
-	console.error('usage: node tools/paper-server-test.js "<server folder>" --plugin <jar> --eula [--paper 26.3] [--port <n>] [--timeout <s>]');
+	console.error('usage: node tools/paper-server-test.js "<server folder>" --plugin <jar> --eula [--paper 26.3] [--port <n>] [--timeout <s>] [--no-chest-memory]');
 	process.exit(2);
 }
 if (!flag('--eula')) {
@@ -68,6 +70,14 @@ function prepare() {
 		if (f.endsWith('.jar')) fs.rmSync(path.join(folder, 'plugins', f));
 	}
 	fs.copyFileSync(plugin, path.join(folder, 'plugins', path.basename(plugin)));
+	// The plugin's settings: its defaults, or chest memory off for the proof run (its checks must fail).
+	const config = path.join(folder, 'plugins', 'PocketList', 'config.yml');
+	if (flag('--no-chest-memory')) {
+		fs.mkdirSync(path.dirname(config), { recursive: true });
+		fs.writeFileSync(config, 'chestMemory: false\n');
+	} else {
+		fs.rmSync(config, { force: true });
+	}
 	for (const w of ['world', 'world_nether', 'world_the_end']) fs.rmSync(path.join(folder, w), { recursive: true, force: true });
 }
 

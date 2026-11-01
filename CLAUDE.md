@@ -23,10 +23,15 @@ it first, and add this session's row before ending.
 - `paper/`: the Paper server plugin (`pocket-list-paper-<version>.jar`), Paper API only, nothing from
   `common`: a plugin never sees Minecraft's classes, so the list model (`Entry`, `PocketListData`,
   `Lists`), the breakdown maths (`FoundRecipe`) and the names are a small plain-Java copy of the mod's.
-  Lists live in each player's persistent data (`PlayerData`); `Counter` recounts on inventory events
-  (never on a timer); `Sidebar` is the HUD as a per-player scoreboard sidebar; `PocketCommand` is every
+  Lists live in each player's persistent data (`PlayerData`); `Counter` recounts on inventory events,
+  plus a 2-second recheck only for players with a list and remembered containers; `ChestMemory`
+  remembers the containers a player opened (`Remembered`, at most 256, in their persistent data) and
+  reads them live while they're near, since the server sees inside them; `Paste` is the mod's Paste
+  List in plain Java (`/pocket paste <text>` and `/pocket paste book`); `Settings` is the server
+  owner's `config.yml`; `Sidebar` is the HUD as a per-player scoreboard sidebar; `PocketCommand` is every
   key as `/pocket` and `ChatList` the list screen as clickable chat; `ServerRecipes` reads the server's
-  recipes for Break down; `SelfTest` is what the headless test runs.
+  recipes for Break down; `SelfTest` is what the headless test runs (recipes, paste, and chest memory
+  on real blocks; it answers about three seconds later, once a hopper has run).
 
 ## Build and test
 
@@ -36,7 +41,9 @@ it first, and add this session's row before ending.
   again with that recipe viewer installed. Add `-Pminecraft_version=26.2 -Pfabric_api_version=0.161.0+26.2`
   for 26.2 (JEI 30.29 there; REI only on 26.3); add `-Pneoforge_version=26.2.0.93` too so the NeoForge project configures for 26.2.
 - `./gradlew :paper:test`: the plugin's pure parts (entries, lists and their JSON, the HUD order, the
-  chime rule, recipe tidying, the breakdown maths, the copy text), no server.
+  chime rule, recipe tidying, the breakdown maths, the copy text, pasted text, the remembered-container
+  list), no server. Add `--no-chest-memory` to the server test for the proof run (the selftest's chest
+  checks must fail).
 - `node tools/paper-server-test.js paper/run --plugin paper/build/libs/pocket-list-paper-<v>.jar --eula`
   (Paper): downloads a Paper server into the folder once and starts it on a brand-new world with no
   window: the plugin loads, `/pocket selftest` reads the server's own recipes the way Break down does
@@ -52,7 +59,9 @@ it first, and add this session's row before ending.
   anything with Fabric item storage whose contents the server sends to every
   game) are read through the loader's item storage (`ItemStorage.SIDED` on Fabric, `Capabilities.Item.BLOCK` on NeoForge) from `ChestMemory`, but only after the player has used
   that block, and they're kept live while the player is within 32 blocks. A chest read that way
-  shows empty on the player's side, so chests stay on the screen path.
+  shows empty on the player's side, so chests stay on the screen path. The Paper plugin keeps the same
+  promise from the server's side: only containers the player opened count (read live there, since the
+  server sees inside them), never one they haven't.
 - Other mods, as of 2026-10-15: JEI and REI (pin from their screens, borrow their recipes);
   Mod Menu; the minimap and Simple HUD
   corner defaults; Mighty Mail's mailboxes open a chest menu and are remembered like chests.

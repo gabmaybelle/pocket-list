@@ -90,10 +90,13 @@ The `paper` file is a plugin for [Paper](https://papermc.io/) 26.3 (Java 25). Dr
 - `/pocket add oak_log 32` adds an item (Tab lists every item), `/pocket add hand` adds what you're holding, and `/pocket add recipe lantern` adds what a lantern takes. Add `stack` for a whole stack.
 - `/pocket breakdown lantern` swaps a line for its ingredients using the server's own recipes, data packs included, and asks you to pick when there's more than one.
 - `/pocket new`, `use`, `next`, `rename` and `delete` handle several lists; `/pocket hud off` hides the sidebar and `/pocket hud lines 5` shows five lines. `/pocket help` lists everything.
-- It counts your inventory and off-hand, the shulker boxes and bundles you carry, and whatever container is open. It doesn't remember chests yet.
+- It counts your inventory and off-hand, the shulker boxes and bundles you carry, and whatever container is open.
+- **Chest memory:** chests, barrels, shulker boxes, hoppers, dispensers and droppers you've opened, and shelves you've used, count toward your list while you're within 32 blocks. Only ones you opened yourself count. The server can see inside them, so it counts what's in them now: if a friend or a hopper drops planks in, your list goes up. Ender chests don't count, and a double chest counts once.
+- **Paste a list:** `/pocket paste 64 oak planks, 32 cobblestone; 3 torches` adds a short list, with commas or semicolons between items. For a long one (or a Litematica material list), write it in a book and quill, one item a line, hold it and type `/pocket paste book`. Names it can't match are listed back, never guessed.
 - Your lists are kept on the server with your player, so they're there next time you join (but not on other servers).
 - The sidebar is one spot shared with other plugins, such as a server's stats board. Pocket List uses it only while your list has something on it, and hands it back when the list is empty or you turn it off.
-- Not in the plugin: the corner HUD, keys, pinning from inventory screens and the recipe book, JEI and REI, chest memory, Paste List and From Litematica, and the settings screen. If you also run the mod, you'll see both lists; `/pocket hud off` hides the plugin's.
+- **For server owners**, `plugins/PocketList/config.yml` has four settings, read when the server starts: whether new players see the sidebar, how many lines it shows to start with, chest memory on or off, and how near (8 to 64 blocks) a remembered container must be.
+- Not in the plugin: the corner HUD, keys, pinning from inventory screens and the recipe book, JEI and REI, and the settings screen. If you also run the mod, you'll see both lists; `/pocket hud off` hides the plugin's.
 
 ## Requirements
 

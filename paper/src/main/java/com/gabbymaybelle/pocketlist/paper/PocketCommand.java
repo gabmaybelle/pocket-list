@@ -32,20 +32,24 @@ import org.jspecify.annotations.Nullable;
  * </ul>
  */
 final class PocketCommand implements BasicCommand {
-	private static final List<String> WORDS = List.of("add", "need", "remove", "clear", "new", "use", "next", "prev", "lists", "rename", "delete", "breakdown", "pick", "hud", "page", "help", "selftest");
+	private static final List<String> WORDS = List.of("add", "need", "remove", "clear", "new", "use", "next", "prev", "lists", "rename", "delete", "breakdown", "pick", "hud", "page", "help", "selftest", "paste");
 	private static final long CONFIRM_MS = 3000;
 
 	private final PlayerData data;
 	private final Counter counter;
+	private final org.bukkit.plugin.Plugin plugin;
+	private final Settings settings;
 	private final Map<UUID, Pending> pending = new HashMap<>();
 	private final Map<UUID, Long> deleteAsked = new HashMap<>();
 
 	private record Pending(String key, List<FoundRecipe> recipes) {
 	}
 
-	PocketCommand(PlayerData data, Counter counter) {
+	PocketCommand(PlayerData data, Counter counter, org.bukkit.plugin.Plugin plugin, Settings settings) {
 		this.data = data;
 		this.counter = counter;
+		this.plugin = plugin;
+		this.settings = settings;
 	}
 
 	@Override
@@ -75,6 +79,9 @@ final class PocketCommand implements BasicCommand {
 				}
 				case "pick" -> {
 					return starting(List.of("1", "2", "3", "cancel"), args[1]);
+				}
+				case "paste" -> {
+					return starting(List.of("book"), args[1]);
 				}
 				case "use" -> {
 					if (source.getExecutor() instanceof Player p) {
@@ -123,7 +130,7 @@ final class PocketCommand implements BasicCommand {
 				fail(sender, "Pocket List: selftest is for operators.");
 				return;
 			}
-			SelfTest.run(sender);
+			SelfTest.run(sender, plugin, settings);
 			return;
 		}
 		if (word.equals("help")) {
@@ -233,6 +240,7 @@ final class PocketCommand implements BasicCommand {
 				}
 			}
 			case "breakdown" -> changed = breakDown(player, list, rest);
+			case "paste" -> changed = paste(player, list, rest);
 			case "pick" -> changed = pick(player, list, rest);
 			case "hud" -> {
 				changed = false;
@@ -261,6 +269,60 @@ final class PocketCommand implements BasicCommand {
 			data.save(player);
 			counter.recount(player);
 		}
+	}
+
+	/** The mod's Paste List: a list typed after {@code paste}, or written in the book and quill in hand. */
+	private boolean paste(Player player, PocketListData list, String[] rest) {
+		String text;
+		if (rest.length == 1 && rest[0].equalsIgnoreCase("book")) {
+			ItemStack held = player.getInventory().getItemInMainHand();
+			if (!(held.getItemMeta() instanceof org.bukkit.inventory.meta.WritableBookMeta book) || book.getPageCount() == 0) {
+				fail(player, "Pocket List: hold a book and quill with your list written in it, one item a line.");
+				return false;
+			}
+			text = String.join("\n", book.getPages());
+		} else if (rest.length > 0) {
+			text = Paste.chatLines(String.join(" ", rest));
+		} else {
+			fail(player, "Pocket List: /pocket paste 64 oak planks, 32 cobblestone, or /pocket paste book");
+			return false;
+		}
+		Paste.Result read = Paste.read(text, PocketCommand::itemsNamed);
+		for (Entry e : read.entries()) list.topUp(e.items, e.need);
+		if (read.entries().isEmpty()) {
+			fail(player, "Pocket List: nothing in that matched an item" + (read.unknown().isEmpty() ? "." : ": " + String.join(", ", read.unknown()) + "."));
+			return false;
+		}
+		say(player, "Added " + read.entries().size() + " line" + (read.entries().size() == 1 ? "" : "s") + " to " + list.name + ".");
+		if (!read.unknown().isEmpty()) fail(player, "Pocket List: no item called " + String.join(", ", read.unknown()) + ".");
+		return true;
+	}
+
+	/**
+	 * The item keys a pasted name counts: an id ("minecraft:oak_planks"), a tag ("#minecraft:planks",
+	 * every item in it), or a name ("oak planks", "torches"); null when nothing matches.
+	 */
+	static @Nullable List<String> itemsNamed(String name) {
+		String lower = name.strip().toLowerCase(Locale.ROOT);
+		if (lower.startsWith("#")) {
+			org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(lower.substring(1));
+			org.bukkit.Tag<Material> tag = key == null ? null : org.bukkit.Bukkit.getTag(org.bukkit.Tag.REGISTRY_ITEMS, key, Material.class);
+			if (tag == null || tag.getValues().isEmpty()) return null;
+			List<String> keys = new ArrayList<>();
+			for (Material m : tag.getValues()) keys.add(m.getKey().toString());
+			keys.sort(null);
+			// The line is named after its first item, so a wood tag reads "Oak Planks (or similar)" as in recipes.
+			keys.stream().filter(k -> k.startsWith("minecraft:oak_")).findFirst().ifPresent(oak -> {
+				keys.remove(oak);
+				keys.add(0, oak);
+			});
+			return keys;
+		}
+		for (String candidate : lower.contains(":") ? List.of(lower) : Paste.candidates(lower)) {
+			Material m = Material.matchMaterial(Names.key(candidate));
+			if (m != null && m.isItem() && !m.isAir()) return List.of(m.getKey().toString());
+		}
+		return null;
 	}
 
 	private boolean add(Player player, PocketListData list, String[] rest) {
@@ -481,6 +543,8 @@ final class PocketCommand implements BasicCommand {
 				"/pocket add recipe <item> [stack]  adds what a recipe needs",
 				"/pocket need <item> <amount|+n|-n>, /pocket remove <item>, /pocket clear [done|all]",
 				"/pocket breakdown <item>  swaps a line for what makes it",
+				"/pocket paste 64 oak planks, 32 cobblestone  adds a list (commas or semicolons between items)",
+				"/pocket paste book  adds the list written in the book and quill in your hand, one item a line",
 				"/pocket new [name], use <name>, next, prev, lists, rename <name>, delete",
 				"/pocket hud on|off, /pocket hud lines <1-15>")) {
 			sender.sendMessage(Component.text(line, NamedTextColor.GRAY));
