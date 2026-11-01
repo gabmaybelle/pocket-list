@@ -173,4 +173,49 @@ class LogicTest {
 		list.topUp(List.of("minecraft:torch"), 16);
 		assertEquals("64 Oak Planks\n16 Torch\n", ChatList.copyText(list));
 	}
+
+	@Test
+	void chatButtonsNameAnOrSimilarLineShortly() {
+		List<String> planks = List.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "pale_oak", "crimson", "warped", "mangrove", "bamboo", "cherry", "poplar")
+				.stream().map(w -> "minecraft:" + w + "_planks").toList();
+		PocketListData list = new PocketListData("x");
+		Entry oakOnly = list.topUp(List.of("minecraft:oak_planks"), 4);
+		Entry anyPlanks = list.topUp(planks, 16);
+		// The longest button command must fit chat's 256-character limit, or the server drops the player.
+		assertTrue(("/pocket need " + anyPlanks.ref() + " " + Entry.MAX_NEED).length() <= 256, anyPlanks.ref());
+		assertEquals("minecraft:oak_planks+", anyPlanks.ref());
+		assertEquals(anyPlanks, list.find(anyPlanks.ref()));
+		assertEquals(oakOnly, list.find(oakOnly.ref()));
+		assertEquals(anyPlanks, list.find(anyPlanks.key()));
+	}
+
+	@Test
+	void addingWhatYouHaveToAnEmptyListDoesNotChime() {
+		PocketListData list = new PocketListData("x");
+		assertFalse(list.applyCounts(Map.of("minecraft:oak_log", 9)));
+		list.topUp(List.of("minecraft:oak_log"), 4);
+		assertFalse(list.applyCounts(Map.of("minecraft:oak_log", 9)), "nine logs in hand, four added: no chime, as in the mod");
+		list.topUp(List.of("minecraft:torch"), 4);
+		assertFalse(list.applyCounts(Map.of("minecraft:oak_log", 9)));
+		assertTrue(list.applyCounts(Map.of("minecraft:oak_log", 9, "minecraft:torch", 4)), "the torches gathered: chime");
+		list.topUp(List.of("minecraft:stick"), 3);
+		assertFalse(list.applyCounts(Map.of()));
+		list.entries.clear();
+		assertFalse(list.applyCounts(Map.of()), "clearing an unfinished list: no chime");
+	}
+
+	@Test
+	void chatButtonsStepFromTheCurrentNeed() {
+		// An old chat row's [+] clicked twice must count twice: the buttons send +1, not "17".
+		int need = 16;
+		need = Entry.needAfter(need, "+1");
+		need = Entry.needAfter(need, "+1");
+		assertEquals(18, need);
+		assertEquals(82, Entry.needAfter(18, "+64"));
+		assertEquals(1, Entry.needAfter(1, "-1"));
+		assertEquals(5, Entry.needAfter(18, "5"));
+		assertEquals(0, Entry.needAfter(18, "0"));
+		assertEquals(-1, Entry.needAfter(18, "lots"));
+		assertEquals(Entry.MAX_NEED, Entry.needAfter(Entry.MAX_NEED, "+64"));
+	}
 }

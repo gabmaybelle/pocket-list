@@ -33,9 +33,35 @@ public final class Entry {
 		return Math.max(1, Math.min(MAX_NEED, need));
 	}
 
+	/**
+	 * The need after {@code /pocket need <item> <amount>}: a plain number sets it (0 takes the line
+	 * off); {@code +n} or {@code -n} moves it from where it is, never below 1, like the mod's
+	 * buttons. The chat buttons send {@code +1}, {@code -1} and {@code +64}, so clicking an old
+	 * row twice counts twice. -1 when the amount isn't a number.
+	 */
+	public static int needAfter(int current, String amount) {
+		int n;
+		try {
+			n = Integer.parseInt(amount);
+		} catch (NumberFormatException e) {
+			return -1;
+		}
+		if (amount.startsWith("+") || amount.startsWith("-")) return clamp(current + n);
+		return n < 0 ? -1 : Math.min(MAX_NEED, n);
+	}
+
 	/** What identifies the line: its items joined with {@code |}. The same key tops up, never doubles. */
 	public String key() {
 		return String.join("|", items);
+	}
+
+	/**
+	 * A short name for the line in chat-button commands: the item, or for an "or similar" line its
+	 * first item and a {@code +}. The full key of a planks line runs past chat's 256-character
+	 * command limit, and a longer command makes the server drop the player.
+	 */
+	public String ref() {
+		return items.size() > 1 ? mainItem() + "+" : mainItem();
 	}
 
 	public String mainItem() {

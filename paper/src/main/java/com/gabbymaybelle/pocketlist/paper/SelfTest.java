@@ -12,7 +12,9 @@ import org.bukkit.command.CommandSender;
  * unit tests. Checks: oak planks come from a log (4 a craft); sticks have more than one recipe
  * (planks and bamboo), so the chooser path exists; an iron ingot's furnace and blast furnace
  * recipes merge into one line; a torch's recipe reads coal-or-charcoal as one "or similar"
- * ingredient; and breaking 64 sticks down with 10 in hand asks for 28 planks.
+ * ingredient; such a line is named after the item the game lists first (a chest's "Oak Planks
+ * (or similar)", a torch's "Coal (or similar)"); and breaking 64 sticks down with 10 in hand asks
+ * for 28 planks.
  */
 final class SelfTest {
 	private SelfTest() {
@@ -45,6 +47,16 @@ final class SelfTest {
 		boolean orSimilar = false;
 		for (FoundRecipe r : torch) for (List<String> ing : r.ingredients().keySet()) if (ing.size() > 1) orSimilar = true;
 		if (torch.isEmpty() || !orSimilar) failures.add("torch: expected coal-or-charcoal as one ingredient with alternatives, got " + describe(torch));
+
+		List<FoundRecipe> chest = ServerRecipes.lookup(Material.CHEST);
+		checks++;
+		List<String> chestPlanks = null;
+		for (FoundRecipe r : chest) for (List<String> ing : r.ingredients().keySet()) if (ing.contains("minecraft:oak_planks")) chestPlanks = ing;
+		List<String> torchCoal = null;
+		for (FoundRecipe r : torch) for (List<String> ing : r.ingredients().keySet()) if (ing.contains("minecraft:charcoal")) torchCoal = ing;
+		if (chestPlanks == null || !chestPlanks.get(0).equals("minecraft:oak_planks") || torchCoal == null || !torchCoal.get(0).equals("minecraft:coal")) {
+			failures.add("names: a chest's planks should read Oak Planks (or similar) and a torch's Coal (or similar), got " + chestPlanks + " and " + torchCoal);
+		}
 
 		checks++;
 		if (!sticks.isEmpty()) {

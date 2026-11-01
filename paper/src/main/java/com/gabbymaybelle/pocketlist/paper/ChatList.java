@@ -47,17 +47,17 @@ final class ChatList {
 		List<Entry> rows = list.entries;
 		for (int i = (page - 1) * PAGE; i < Math.min(rows.size(), page * PAGE); i++) {
 			Entry e = rows.get(i);
-			String key = e.key();
+			String key = e.ref();
 			TextColor colour = e.done() ? Sidebar.GREEN : NamedTextColor.WHITE;
 			int stack = Math.max(1, stackOf(e));
 			player.sendMessage(Component.text(" " + Math.min(e.have, e.need) + "/" + e.need + " ", colour)
 					.append(Sidebar.name(e).color(colour))
 					.append(Component.text("  "))
-					.append(button("-", "/pocket need " + key + " " + (e.need - 1), "One fewer"))
+					.append(button("-", "/pocket need " + key + " -1", "One fewer"))
 					.append(Component.text(" "))
-					.append(button("+", "/pocket need " + key + " " + (e.need + 1), "One more"))
+					.append(button("+", "/pocket need " + key + " +1", "One more"))
 					.append(Component.text(" "))
-					.append(button("+" + stack, "/pocket need " + key + " " + (e.need + stack), "A stack more"))
+					.append(button("+" + stack, "/pocket need " + key + " +" + stack, "A stack more"))
 					.append(Component.text(" "))
 					.append(button("break down", "/pocket breakdown " + key, e.done() ? "You have enough of this already" : "Swap this line for what makes it"))
 					.append(Component.text(" "))

@@ -28,6 +28,8 @@ public final class PocketListData {
 
 	public @Nullable Entry find(String key) {
 		for (Entry e : entries) if (e.key().equals(key)) return e;
+		// A chat button's short name; it never matches a full key, which has no "+".
+		for (Entry e : entries) if (e.ref().equals(key)) return e;
 		return null;
 	}
 
@@ -63,6 +65,8 @@ public final class PocketListData {
 	/**
 	 * Puts the counts on the lines and says whether the list has just become complete: the chime's
 	 * rule, which fires on the transition only (a list already complete at its first count is quiet).
+	 * An empty list counts as finished here, as in the mod, so adding something you already have to
+	 * an empty list doesn't chime; emptying a list doesn't chime either.
 	 */
 	public boolean applyCounts(java.util.Map<String, Integer> counts) {
 		for (Entry e : entries) {
@@ -70,8 +74,8 @@ public final class PocketListData {
 			for (String item : e.items) have += counts.getOrDefault(item, 0);
 			e.have = have;
 		}
-		boolean finished = allDone();
-		boolean justNow = finished && Boolean.FALSE.equals(wasFinished);
+		boolean finished = entries.isEmpty() || allDone();
+		boolean justNow = !entries.isEmpty() && finished && Boolean.FALSE.equals(wasFinished);
 		wasFinished = finished;
 		return justNow;
 	}

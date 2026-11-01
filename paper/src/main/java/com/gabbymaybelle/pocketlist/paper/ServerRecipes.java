@@ -98,7 +98,12 @@ final class ServerRecipes {
 		ingredients.merge(items, count, Integer::sum);
 	}
 
-	/** The item keys a choice accepts, in a fixed order so equal choices compare equal. */
+	/**
+	 * The item keys a choice accepts, in the choice's own order: the tag's order for a tag (oak
+	 * before spruce, coal before charcoal), the same every time, so equal choices compare equal.
+	 * The first item names the line, as in the mod and the recipe book; sorting A to Z named a
+	 * chest's planks "Acacia Planks (or similar)".
+	 */
 	static List<String> items(@Nullable RecipeChoice choice) {
 		List<String> keys = new ArrayList<>();
 		switch (choice) {
@@ -122,8 +127,6 @@ final class ServerRecipes {
 				}
 			}
 		}
-		List<String> distinct = new ArrayList<>(new java.util.LinkedHashSet<>(keys));
-		if (distinct.size() > 1) distinct.sort(null);
-		return distinct;
+		return new ArrayList<>(new java.util.LinkedHashSet<>(keys));
 	}
 }

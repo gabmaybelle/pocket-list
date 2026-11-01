@@ -24,7 +24,7 @@ import org.jspecify.annotations.Nullable;
  * <ul>
  * <li>{@code /pocket}: the active list in chat with its buttons.</li>
  * <li>{@code add <item> [amount|stack]}, {@code add hand [amount|stack]}, {@code add recipe <item> [stack]}.</li>
- * <li>{@code need <item> <amount>}, {@code remove <item>}, {@code clear [done]}.</li>
+ * <li>{@code need <item> <amount|+n|-n>}, {@code remove <item>}, {@code clear [done]}.</li>
  * <li>{@code new [name]}, {@code use <name>}, {@code next}, {@code prev}, {@code lists}, {@code rename <name>}, {@code delete}.</li>
  * <li>{@code breakdown <item>} and {@code pick <n|cancel>} when there is more than one recipe.</li>
  * <li>{@code hud on|off}, {@code hud lines <n>}, {@code page <n>}, {@code help}.</li>
@@ -288,7 +288,7 @@ final class PocketCommand implements BasicCommand {
 			int crafts = stack ? Math.max(1, (m.getMaxStackSize() + recipes.get(0).makes() - 1) / recipes.get(0).makes()) : 1;
 			if (recipes.size() == 1) {
 				addIngredients(list, recipes.get(0), crafts);
-				say(player, "Added what " + recipes.get(0).station() + " needs for " + Names.english(m.getKey().toString()) + (crafts > 1 ? " (" + crafts + " crafts)." : "."));
+				say(player, "Added what makes " + Names.english(m.getKey().toString()) + via(recipes.get(0)) + (crafts > 1 ? ", " + crafts + " crafts." : "."));
 				return true;
 			}
 			pending.put(player.getUniqueId(), new Pending("+" + crafts + "|" + m.getKey(), recipes));
@@ -339,13 +339,18 @@ final class PocketCommand implements BasicCommand {
 			fail(player, "Pocket List: /pocket need <item> <amount>");
 			return false;
 		}
-		int amount = parseInt(rest[rest.length - 1], -1);
+		String typed = rest[rest.length - 1];
 		String key = String.join(" ", Arrays.copyOfRange(rest, 0, rest.length - 1));
 		Entry e = list.find(key);
 		if (e == null) e = list.find(Names.key(key));
+		int amount = Entry.needAfter(e == null ? 0 : e.need, typed);
+		if (amount < 0) {
+			fail(player, "Pocket List: /pocket need <item> <amount>, or +n / -n to change it.");
+			return false;
+		}
 		if (e == null) {
 			Material m = material(Arrays.copyOfRange(rest, 0, rest.length - 1));
-			if (m == null) {
+			if (m == null || typed.startsWith("-")) {
 				fail(player, "Pocket List: that line isn't on the list.");
 				return false;
 			}
@@ -354,7 +359,7 @@ final class PocketCommand implements BasicCommand {
 			say(player, "Added " + e.need + " " + e.name() + ".");
 			return true;
 		}
-		if (amount <= 0) {
+		if (amount == 0) {
 			list.entries.remove(e);
 			say(player, "Took " + e.name() + " off the list.");
 			return true;
@@ -390,7 +395,7 @@ final class PocketCommand implements BasicCommand {
 		}
 		if (recipes.size() == 1) {
 			recipes.get(0).apply(list, e);
-			say(player, "Swapped " + e.name() + " for what " + recipes.get(0).station() + " needs.");
+			say(player, "Swapped " + e.name() + " for what makes it" + via(recipes.get(0)) + ".");
 			return true;
 		}
 		pending.put(player.getUniqueId(), new Pending(e.key(), recipes));
@@ -429,7 +434,7 @@ final class PocketCommand implements BasicCommand {
 		if (p.key.startsWith("+")) {
 			int crafts = parseInt(p.key.substring(1, p.key.indexOf('|')), 1);
 			addIngredients(list, r, crafts);
-			say(player, "Added what " + r.station() + " needs.");
+			say(player, "Added what makes it" + via(r) + ".");
 			return true;
 		}
 		Entry e = list.find(p.key);
@@ -439,7 +444,7 @@ final class PocketCommand implements BasicCommand {
 		}
 		Counter.apply(list, Counter.count(player));
 		r.apply(list, e);
-		say(player, "Swapped " + e.name() + " for what " + r.station() + " needs.");
+		say(player, "Swapped " + e.name() + " for what makes it" + via(r) + ".");
 		return true;
 	}
 
@@ -452,6 +457,11 @@ final class PocketCommand implements BasicCommand {
 		if (words.length == 0) return null;
 		Material m = Material.matchMaterial(Names.key(String.join(" ", words)));
 		return m != null && m.isItem() && !m.isAir() ? m : null;
+	}
+
+	/** " with the Furnace" after a message for a recipe that isn't made at a crafting table; nothing for one that is. */
+	private static String via(FoundRecipe r) {
+		return r.stationOrder() == FoundRecipe.CRAFTING ? "" : " with the " + r.station();
 	}
 
 	private static int parseInt(String s, int fallback) {
@@ -469,7 +479,7 @@ final class PocketCommand implements BasicCommand {
 				"/pocket add <item> [amount|stack]  adds an item (tab shows every item)",
 				"/pocket add hand [amount|stack]  adds what you're holding",
 				"/pocket add recipe <item> [stack]  adds what a recipe needs",
-				"/pocket need <item> <amount>, /pocket remove <item>, /pocket clear [done]",
+				"/pocket need <item> <amount|+n|-n>, /pocket remove <item>, /pocket clear [done|all]",
 				"/pocket breakdown <item>  swaps a line for what makes it",
 				"/pocket new [name], use <name>, next, prev, lists, rename <name>, delete",
 				"/pocket hud on|off, /pocket hud lines <1-15>")) {
